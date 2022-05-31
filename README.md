@@ -1,1 +1,1 @@
-# Dna-seq_Analysisi
+# Dna-seq_Analysis
