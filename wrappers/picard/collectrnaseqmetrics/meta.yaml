@@ -1,0 +1,5 @@
+name: picard CollectRnaSeqMetrics
+description: |
+  Collect metric information for rna seq metrics runs, with picard tools.
+authors:
+  - wuqi

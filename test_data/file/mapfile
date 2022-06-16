@@ -1,0 +1,2 @@
+sample_name	fq_outdir	config_outdir	fa	fq1	fq2	mod
+test	/SGRNJ06/randd/USER/wuqi/Dna_seq/Workdir/Repository/test_data/fastq/	/SGRNJ06/randd/USER/wuqi/Dna_seq/Workdir/Repository/config/	/SGRNJ06/randd/USER/wuqi/Dna_seq/Workdir/Repository/test_data/file/index.fa	/SGRNJ06/randd/USER/wuqi/Dna_seq/Workdir/Repository/test_data/fastq/test_R1.fastq	/SGRNJ06/randd/USER/wuqi/Dna_seq/Workdir/Repository/test_data/fastq/test_R2.fastq	fq2
