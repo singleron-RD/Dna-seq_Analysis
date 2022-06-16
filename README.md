@@ -59,6 +59,7 @@ python split_vcf.py --qc no
 ## 分步运行
 
 ### 需要拆分的样本
+
 如果需要根据index去拆分原始序列，那么需要使用 split_scripts/split_fastq.py 将原始序列拆分为含有各 index 的序列。
 
 #### split_fastq.py 脚本使用说明
@@ -139,4 +140,3 @@ python split_fastq.py --mapfile test_data/file/mapfile;
 snakemake -s workflow/Snakefile --use-conda --cores 10;
 python split_vcf.py --qc no
 ```
-
