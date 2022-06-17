@@ -163,7 +163,7 @@ class Split_fastq():
                     f'seqtk subseq {fq1} {fq_outdir}/{sample_name}_{frist_adapter}.lst > {out_fq_R1};'
                     f'seqtk subseq {fq2} {fq_outdir}/{sample_name}_{frist_adapter}.lst > {out_fq_R2}'
                     )
-        print(cmd_line)
+       
         subprocess.check_call(cmd_line,shell=True)
         print(f'the {I+1} finished')
         
