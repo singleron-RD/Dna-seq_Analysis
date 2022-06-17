@@ -15,8 +15,6 @@ from functools import wraps
 
 
 
-I = 0
-
 
 def add_log(func):
     '''
@@ -106,6 +104,8 @@ class Split_fastq():
         """
         args_dict = self.args_dict
         for sample in args_dict:
+            global I
+            I = 0
             sample_name = args_dict[sample]['sample_name']
             fa = args_dict[sample]['fa']
             fq1 = args_dict[sample]['fq1']
