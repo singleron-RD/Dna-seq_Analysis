@@ -1,6 +1,6 @@
 rule get_genome:
     output:
-        "/SGRNJ06/randd/public/wgs_ref/homo_sapiens/genome.fasta",
+        "resources/homo_sapiens/genome.fasta",
     log:
         "logs/get-genome.log",
     params:
@@ -16,9 +16,9 @@ rule get_genome:
 
 checkpoint genome_faidx: 
     input:
-        "/SGRNJ06/randd/public/wgs_ref/homo_sapiens/genome.fasta",
+        "resources/homo_sapiens/genome.fasta",
     output:
-        "/SGRNJ06/randd/public/wgs_ref/homo_sapiens/genome.fasta.fai"
+        "resources/homo_sapiens/genome.fasta.fai"
     log:
         "logs/genome-faidx.log",
     cache: True
@@ -28,9 +28,9 @@ checkpoint genome_faidx:
 
 rule genome_dict: 
     input:
-        "/SGRNJ06/randd/public/wgs_ref/homo_sapiens/genome.fasta",
+        "resources/homo_sapiens/genome.fasta",
     output:
-        "/SGRNJ06/randd/public/wgs_ref/homo_sapiens/genome.dict",
+        "resources/homo_sapiens/genome.dict",
     log:
         "logs/samtools/create_dict.log",
     conda:
@@ -43,9 +43,9 @@ rule genome_dict:
 rule get_known_variation:
     input:
         # use fai to annotate contig lengths for GATK BQSR
-        fai="/SGRNJ06/randd/public/wgs_ref/homo_sapiens/genome.fasta.fai",
+        fai="resources/homo_sapiens/genome.fasta.fai",
     output:
-        vcf="/SGRNJ06/randd/public/wgs_ref/homo_sapiens/variation.vcf.gz",
+        vcf="resources/homo_sapiens/variation.vcf.gz",
     log:
         "logs/get-known-variants.log",
     params:
@@ -60,9 +60,9 @@ rule get_known_variation:
 
 rule remove_iupac_codes: 
     input:
-        "/SGRNJ06/randd/public/wgs_ref/homo_sapiens/variation.vcf.gz",
+        "resources/homo_sapiens/variation.vcf.gz",
     output:
-        "/SGRNJ06/randd/public/wgs_ref/homo_sapiens/variation.noiupac.vcf.gz",
+        "resources/homo_sapiens/variation.noiupac.vcf.gz",
     log:
         "logs/fix-iupac-alleles.log",
     conda:
@@ -74,9 +74,9 @@ rule remove_iupac_codes:
 
 rule tabix_known_variants: 
     input:
-        "/SGRNJ06/randd/public/wgs_ref/homo_sapiens/variation.noiupac.vcf.gz",
+        "resources/homo_sapiens/variation.noiupac.vcf.gz",
     output:
-        "/SGRNJ06/randd/public/wgs_ref/homo_sapiens/variation.noiupac.vcf.gz.tbi",
+        "resources/homo_sapiens/variation.noiupac.vcf.gz.tbi",
     log:
         "logs/tabix/variation.log",
     params:
@@ -88,9 +88,9 @@ rule tabix_known_variants:
 
 rule bwa_index: 
     input:
-        "/SGRNJ06/randd/public/wgs_ref/homo_sapiens/genome.fasta",
+        "resources/homo_sapiens/genome.fasta",
     output:
-        multiext("/SGRNJ06/randd/public/wgs_ref/homo_sapiens/genome.fasta", ".amb", ".ann", ".bwt", ".pac", ".sa"),
+        multiext("resources/homo_sapiens/genome.fasta", ".amb", ".ann", ".bwt", ".pac", ".sa"),
     log:
         "logs/bwa_index.log",
     resources:
@@ -102,7 +102,7 @@ rule bwa_index:
 
 rule get_vep_cache:
     output:
-        directory("/SGRNJ06/randd/public/wgs_ref/homo_sapiens/vep/cache"),
+        directory("resources/homo_sapiens/vep/cache"),
     params:
         species=config["ref"]["species"],
         build=config["ref"]["build"],
@@ -116,7 +116,7 @@ rule get_vep_cache:
 
 rule get_vep_plugins:
     output:
-        directory("/SGRNJ06/randd/public/wgs_ref/homo_sapiens/vep/plugins"),
+        directory("resources/homo_sapiens/vep/plugins"),
     log:
         "logs/vep/plugins.log",
     params:

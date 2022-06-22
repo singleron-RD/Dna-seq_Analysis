@@ -1,8 +1,8 @@
 rule annotate_variants:
     input:
         calls="results/filtered/all.vcf.gz",
-        cache="/SGRNJ06/randd/public/wgs_ref/homo_sapiens/vep/cache",
-        plugins="/SGRNJ06/randd/public/wgs_ref/homo_sapiens/vep/plugins",
+        cache="resources/homo_sapiens/vep/cache",
+        plugins="resources/homo_sapiens/vep/plugins",
     output:
         calls=report(
             "results/annotated/all.vcf.gz",

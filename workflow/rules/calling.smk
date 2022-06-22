@@ -14,10 +14,10 @@ if "restrict-regions" in config["processing"]:
 rule call_variants:
     input:
         bam=get_sample_bams,
-        ref="/SGRNJ06/randd/public/wgs_ref/homo_sapiens/genome.fasta",
-        idx="/SGRNJ06/randd/public/wgs_ref/homo_sapiens/genome.dict",
-        known="/SGRNJ06/randd/public/wgs_ref/homo_sapiens/variation.noiupac.vcf.gz",
-        tbi="/SGRNJ06/randd/public/wgs_ref/homo_sapiens/variation.noiupac.vcf.gz.tbi",
+        ref="resources/homo_sapiens/genome.fasta",
+        idx="resources/homo_sapiens/genome.dict",
+        known="resources/homo_sapiens/variation.noiupac.vcf.gz",
+        tbi="resources/homo_sapiens/variation.noiupac.vcf.gz.tbi",
         regions=(
             "results/called/{contig}.regions.bed"
             if config["processing"].get("restrict-regions")
@@ -37,7 +37,7 @@ rule call_variants:
 
 rule combine_calls:
     input:
-        ref="/SGRNJ06/randd/public/wgs_ref/homo_sapiens/genome.fasta",
+        ref="resources/homo_sapiens/genome.fasta",
         gvcfs=expand(
             "results/called/{sample}.{{contig}}.g.vcf.gz", sample=samples.index
         ),
@@ -53,7 +53,7 @@ rule combine_calls:
 
 rule genotype_variants:
     input:
-        ref="/SGRNJ06/randd/public/wgs_ref/homo_sapiens/genome.fasta",
+        ref="resources/homo_sapiens/genome.fasta",
         gvcf="results/called/all.{contig}.g.vcf.gz",
     output:
         vcf=temp("results/genotyped/all.{contig}.vcf.gz"),

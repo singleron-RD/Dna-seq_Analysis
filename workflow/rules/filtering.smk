@@ -1,6 +1,6 @@
 rule select_calls:
     input:
-        ref="/SGRNJ06/randd/public/wgs_ref/homo_sapiens/genome.fasta",
+        ref="resources/homo_sapiens/genome.fasta",
         vcf="results/genotyped/all.vcf.gz",
     output:
         vcf=temp("results/filtered/all.{vartype}.vcf.gz"),
@@ -16,7 +16,7 @@ rule select_calls:
 
 rule hard_filter_calls:
     input:
-        ref="/SGRNJ06/randd/public/wgs_ref/homo_sapiens/genome.fasta",
+        ref="resources/homo_sapiens/genome.fasta",
         vcf="results/filtered/all.{vartype}.vcf.gz",
     output:
         vcf=temp("results/filtered/all.{vartype}.hardfiltered.vcf.gz"),

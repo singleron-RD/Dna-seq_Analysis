@@ -75,10 +75,10 @@ rule recalibrate_base_qualities:
     input:
         bam=get_recal_input(),
         bai=get_recal_input(bai=True),
-        ref="/SGRNJ06/randd/public/wgs_ref/homo_sapiens/genome.fasta",
-        dict="/SGRNJ06/randd/public/wgs_ref/homo_sapiens/genome.dict",
-        known="/SGRNJ06/randd/public/wgs_ref/homo_sapiens/variation.noiupac.vcf.gz",
-        known_idx="/SGRNJ06/randd/public/wgs_ref/homo_sapiens/variation.noiupac.vcf.gz.tbi",
+        ref="resources/homo_sapiens/genome.fasta",
+        dict="resources/homo_sapiens/genome.dict",
+        known="resources/homo_sapiens/variation.noiupac.vcf.gz",
+        known_idx="resources/homo_sapiens/variation.noiupac.vcf.gz.tbi",
     output:
         recal_table="results/recal/{sample}-{unit}.grp",
     log:
@@ -97,8 +97,8 @@ rule apply_base_quality_recalibration:
     input:
         bam=get_recal_input(),
         bai=get_recal_input(bai=True),
-        ref="/SGRNJ06/randd/public/wgs_ref/homo_sapiens/genome.fasta",
-        dict="/SGRNJ06/randd/public/wgs_ref/homo_sapiens/genome.dict",
+        ref="resources/homo_sapiens/genome.fasta",
+        dict="resources/homo_sapiens/genome.dict",
         recal_table="results/recal/{sample}-{unit}.grp",
     output:
         bam=protected("results/recal/{sample}-{unit}.bam"),
