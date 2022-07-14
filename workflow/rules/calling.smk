@@ -14,30 +14,30 @@ if "restrict-regions" in config["processing"]:
 rule call_variants:
     input:
         bam=get_sample_bams,
-        ref="resources/homo_sapiens/genome.fasta",
-        idx="resources/homo_sapiens/genome.dict",
-        known="resources/homo_sapiens/variation.noiupac.vcf.gz",
-        tbi="resources/homo_sapiens/variation.noiupac.vcf.gz.tbi",
+        ref="resources/genome.fasta",
+        idx="resources/genome.dict",
+        known="resources/variation.noiupac.vcf.gz",
+        tbi="resources/variation.noiupac.vcf.gz.tbi",
         regions=(
             "results/called/{contig}.regions.bed"
             if config["processing"].get("restrict-regions")
             else []
         ),
     output:
-        gvcf=protected("results/called/{sample}.{contig}.g.vcf.gz"),
+        gvcf=temp("results/called/{sample}.{contig}.g.vcf.gz"),
     log:
         "logs/gatk/haplotypecaller/{sample}.{contig}.log",
     benchmark:
         "results/benchmarks/{sample}.{contig}.call_variants.benchmark.txt",
     params:
         extra=get_call_variants_params,
-    wrapper:
-        "file:wrappers/gatk/haplotypecaller_v59"
+    script:
+        "../../scripts/calling/call_variants.py"
 
 
 rule combine_calls:
     input:
-        ref="resources/homo_sapiens/genome.fasta",
+        ref="resources/genome.fasta",
         gvcfs=expand(
             "results/called/{sample}.{{contig}}.g.vcf.gz", sample=samples.index
         ),
@@ -47,13 +47,13 @@ rule combine_calls:
         "logs/gatk/combinegvcfs.{contig}.log",
     benchmark:
         "results/benchmarks/{contig}.combine_calls.benchmark.txt",
-    wrapper:
-        "file:wrappers/gatk/combinegvcfs"
+    script:
+        "../../scripts/calling/combine_calls.py"
 
 
 rule genotype_variants:
     input:
-        ref="resources/homo_sapiens/genome.fasta",
+        ref="resources/genome.fasta",
         gvcf="results/called/all.{contig}.g.vcf.gz",
     output:
         vcf=temp("results/genotyped/all.{contig}.vcf.gz"),
@@ -63,8 +63,8 @@ rule genotype_variants:
         "logs/gatk/genotypegvcfs.{contig}.log",
     benchmark:
         "results/benchmarks/{contig}.genotype_variants.benchmark.txt",
-    wrapper:
-        "file:wrappers/gatk/genotypegvcfs"
+    script:
+        "../../scripts/calling/genotype_variants.py"
 
 
 rule merge_variants:
@@ -78,5 +78,5 @@ rule merge_variants:
         "logs/picard/merge-genotyped.log",
     benchmark:
         "results/benchmarks/merge-genotyped.merge_variants.benchmark.txt",
-    wrapper:
-        "file:wrappers/picard/mergevcfs"
+    script:
+        "../../scripts/calling/merge_variants.py"

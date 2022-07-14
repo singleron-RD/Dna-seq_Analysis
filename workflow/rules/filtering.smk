@@ -1,6 +1,6 @@
 rule select_calls:
     input:
-        ref="resources/homo_sapiens/genome.fasta",
+        ref="resources/genome.fasta",
         vcf="results/genotyped/all.vcf.gz",
     output:
         vcf=temp("results/filtered/all.{vartype}.vcf.gz"),
@@ -10,13 +10,13 @@ rule select_calls:
         "logs/gatk/selectvariants/{vartype}.log",
     benchmark:
         "results/benchmarks/{vartype}.select_calls.benchmark.txt",
-    wrapper:
-        "file:wrappers/gatk/selectvariants_v59"
+    script:
+        "../../scripts/filtering/select_calls.py"
 
 
 rule hard_filter_calls:
     input:
-        ref="resources/homo_sapiens/genome.fasta",
+        ref="resources/genome.fasta",
         vcf="results/filtered/all.{vartype}.vcf.gz",
     output:
         vcf=temp("results/filtered/all.{vartype}.hardfiltered.vcf.gz"),
@@ -26,8 +26,8 @@ rule hard_filter_calls:
         "logs/gatk/variantfiltration/{vartype}.log",
     benchmark:
         "results/benchmarks/{vartype}.hard_filter_calls.benchmark.txt",
-    wrapper:
-        "file:wrappers/gatk/variantfiltration"
+    script:
+        "../../scripts/filtering/hard_filter_calls.py"
 
 
 rule recalibrate_calls:
@@ -41,8 +41,8 @@ rule recalibrate_calls:
         "logs/gatk/variantrecalibrator/{vartype}.log",
     benchmark:
         "results/benchmarks/{vartype}.recalibrate_calls.benchmark.txt",
-    wrapper:
-        "file:wrappers/gatk/variantrecalibrator"
+    script:
+        "../../scripts/filtering/recalibrate_calls.py"
 
 
 rule merge_calls:
@@ -60,5 +60,5 @@ rule merge_calls:
         "logs/picard/merge-filtered.log",
     benchmark:
         "results/benchmarks/merge-filtered.merge_calls.benchmark.txt",
-    wrapper:
-        "file:wrappers/picard/mergevcfs"
+    script:
+        "../../scripts/calling/merge_variants.py"

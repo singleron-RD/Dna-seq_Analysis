@@ -1,8 +1,8 @@
 rule annotate_variants:
     input:
         calls="results/filtered/all.vcf.gz",
-        cache="resources/homo_sapiens/vep/cache",
-        plugins="resources/homo_sapiens/vep/plugins",
+        cache="resources/vep/cache",
+        plugins="resources/vep/plugins",
     output:
         calls=report(
             "results/annotated/all.vcf.gz",
@@ -14,6 +14,11 @@ rule annotate_variants:
             caption="../report/stats.rst",
             category="Calls",
         ),
+        vcf2tsv=report(
+            "results/tables/calls.tsv.gz",
+            caption="../report/calls.rst",
+            category="Calls",
+        )
     params:
         # Pass a list of plugins to use, see https://www.ensembl.org/info/docs/tools/vep/script/vep_plugins.html
         # Plugin args can be added as well, e.g. via an entry "MyPlugin,1,FOO", see docs.
@@ -24,5 +29,5 @@ rule annotate_variants:
     benchmark:
         "results/benchmarks/annotate.annotate_variants.benchmark.txt",
     threads: 4
-    wrapper:
-        "file:wrappers/vep/annotate"
+    script:
+        "../../scripts/split/split_vcf.py"

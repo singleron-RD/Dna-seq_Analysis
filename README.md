@@ -2,28 +2,23 @@
 
 ## 需要拆分的样本
 
-如果需要根据index去拆分原始序列，那么需要使用 scripts/split/split_fastq.py 将原始序列拆分为含有各 index 的序列。
-
-### split_fastq.py 脚本使用说明
-
-运行脚本： 
-
-```shell
-python scripts/split/split_fastq.py --mapfile test_data/file/mapfile
-```
+如果需要根据index去拆分原始序列，首先需要写入config/mafile文件；
+随后将config/config.yaml中split_fq设置为split_fq: true；
+最后直接使用 snakemake 流程进行常规分析。
 
 所需mapfile文件：
 
 ```shell
-$cat mapfile
-sample_name	fq_outdir	config_outdir	fa	fq1	fq2	mod
-test	./test_data/fastq/	./config/	./test_data/file/index.fa	./test_data/fastq/test_R1.fastq	./test_data/fastq/test_R2.fastq	fq2 
+$cat config/mapfile
+sample_name	fq_outdir	fa	fq1	fq2	mod
+test1	./test_data/fastq/	./test_data/file/index1.fa	./test_data/fastq/test_R1.fastq	./test_data/fastq/test_R2.fastq	fq2 
+test2	./test_data/fastq/	./test_data/file/index2.fa	./test_data/fastq/test_R1.fastq	./test_data/fastq/test_R2.fastq	fq2 
 ```
 
 其中fa为使用的 index 文件
 
 ```shell
-$cat ./test_data/file/index.fa
+$cat ./test_data/file/index1.fa
  >index1
  AACCGCGGT
  >index2
@@ -36,11 +31,12 @@ $cat ./test_data/file/index.fa
 
 mod为拆分使用的fq序列。
 
-随后使用 snakemake 流程进行常规分析。
 
 
 ## 不需要根据index拆分的样本
-首先编辑好 config/samples.tsv 及 config/units.tsv 文件。随后直接使用 snakemake 流程进行常规分析。
+首先编辑好 config/samples.tsv 及 config/units.tsv 文件。
+随后将config/config.yaml中split_fq设置为split_fq: false；
+最后直接使用 snakemake 流程进行常规分析。
 
 
 ## snakemake 使用说明
@@ -101,7 +97,6 @@ conda env create -f environment.yaml;pip install requirements.txt
 ├── js
 ├── resources
 ├── scripts
-│   ├── annotation
 │   ├── calling
 │   ├── filtering
 │   ├── mapping
@@ -109,14 +104,7 @@ conda env create -f environment.yaml;pip install requirements.txt
 │   ├── ref
 │   ├── split
 │   └── stats
-├── test_data
-│   ├── fastq
-│   └── file
 └── workflow
-    ├── envs
-    ├── report
-    ├── rules
-    └── schemas
 
 在当前目录下运行 `snakemake -s workflow/Snakefile --cores 10`后，会生成 ./results 目录以及 ./.snakemake 目录。
 此后需要运行其他样本请修改 ./results 目录名称，防止新生成的结果覆盖原结果文件。

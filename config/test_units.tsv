@@ -1,5 +1,0 @@
-sample	unit	platform	fq1	fq2
-test_index_1	1	ILLUMINA	/SGRNJ06/randd/USER/wuqi/Dna_seq/Workdir/Repository/test_data/fastq//test_index_1_R1.fastq	/SGRNJ06/randd/USER/wuqi/Dna_seq/Workdir/Repository/test_data/fastq//test_index_1_R2.fastq
-test_index_2	1	ILLUMINA	/SGRNJ06/randd/USER/wuqi/Dna_seq/Workdir/Repository/test_data/fastq//test_index_2_R1.fastq	/SGRNJ06/randd/USER/wuqi/Dna_seq/Workdir/Repository/test_data/fastq//test_index_2_R2.fastq
-test_index_3	1	ILLUMINA	/SGRNJ06/randd/USER/wuqi/Dna_seq/Workdir/Repository/test_data/fastq//test_index_3_R1.fastq	/SGRNJ06/randd/USER/wuqi/Dna_seq/Workdir/Repository/test_data/fastq//test_index_3_R2.fastq
-test_index_4	1	ILLUMINA	/SGRNJ06/randd/USER/wuqi/Dna_seq/Workdir/Repository/test_data/fastq//test_index_4_R1.fastq	/SGRNJ06/randd/USER/wuqi/Dna_seq/Workdir/Repository/test_data/fastq//test_index_4_R2.fastq

@@ -9,7 +9,7 @@ include: "rules/common.smk"
 rule all:
     input:
         "results/annotated/all.vcf.gz",
-        #"results/qc/multiqc.html",
+        "results/qc/multiqc.html",
         "results/plots/depths.svg",
         "results/plots/allele-freqs.svg",
 

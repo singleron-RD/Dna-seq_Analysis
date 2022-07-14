@@ -10,8 +10,8 @@ rule trim_reads_se:
         "logs/trimmomatic/{sample}-{unit}.log",
     benchmark:
         "results/benchmarks/{sample}-{unit}.trim_reads_se.benchmark.txt",
-    wrapper:
-        "file:wrappers/trimmomatic/se"
+    script:
+        "../../scripts/mapping/trim_reads_se.py"
 
 
 rule trim_reads_pe: 
@@ -30,8 +30,8 @@ rule trim_reads_pe:
         "logs/trimmomatic/{sample}-{unit}.log",
     benchmark:
         "results/benchmarks/{sample}-{unit}.trim_reads_pe.benchmark.txt",
-    wrapper:
-        "file:wrappers/trimmomatic/pe"
+    script:
+        "../../scripts/mapping/trim_reads_pe.py"
 
 
 rule map_reads: 
@@ -50,8 +50,8 @@ rule map_reads:
         sort="samtools",
         sort_order="coordinate",
     threads: 8
-    wrapper:
-        "file:wrappers/bwa/mem"
+    script:
+        "../../scripts/mapping/map_reads.py"
 
 
 rule mark_duplicates: 
@@ -66,8 +66,8 @@ rule mark_duplicates:
         "results/benchmarks/{sample}-{unit}.mark_duplicates.benchmark.txt",
     params:
         config["params"]["picard"]["MarkDuplicates"],
-    wrapper:
-        "file:wrappers/picard/markduplicates"
+    script:
+        "../../scripts/mapping/mark_duplicates.py"
 
 
 
@@ -75,10 +75,10 @@ rule recalibrate_base_qualities:
     input:
         bam=get_recal_input(),
         bai=get_recal_input(bai=True),
-        ref="resources/homo_sapiens/genome.fasta",
-        dict="resources/homo_sapiens/genome.dict",
-        known="resources/homo_sapiens/variation.noiupac.vcf.gz",
-        known_idx="resources/homo_sapiens/variation.noiupac.vcf.gz.tbi",
+        ref="resources/genome.fasta",
+        dict="resources/genome.dict",
+        known="resources/variation.noiupac.vcf.gz",
+        known_idx="resources/variation.noiupac.vcf.gz.tbi",
     output:
         recal_table="results/recal/{sample}-{unit}.grp",
     log:
@@ -88,17 +88,18 @@ rule recalibrate_base_qualities:
     params:
         extra=get_regions_param() + config["params"]["gatk"]["BaseRecalibrator"],
     resources:
-        mem_mb=4096, #old:mem_mb=1024,
-    wrapper:
-        "file:wrappers/gatk/baserecalibrator"
+        mem_mb=4096,
+    script:
+        "../../scripts/mapping/recalibrate_base_qualities.py"
+
 
 
 rule apply_base_quality_recalibration:
     input:
         bam=get_recal_input(),
         bai=get_recal_input(bai=True),
-        ref="resources/homo_sapiens/genome.fasta",
-        dict="resources/homo_sapiens/genome.dict",
+        ref="resources/genome.fasta",
+        dict="resources/genome.dict",
         recal_table="results/recal/{sample}-{unit}.grp",
     output:
         bam=protected("results/recal/{sample}-{unit}.bam"),
@@ -109,9 +110,11 @@ rule apply_base_quality_recalibration:
     params:
         extra=get_regions_param(),
     resources:
-        mem_mb=4096, #old:mem_mb=1024,
-    wrapper:
-        "file:wrappers/gatk/applybqsr"
+        mem_mb=4096,
+    script:
+        "../../scripts/mapping/apply_base_quality_recalibration.py"
+
+
 
 rule samtools_index:
     input:
@@ -122,5 +125,5 @@ rule samtools_index:
         "logs/samtools/index/{prefix}.log",
     benchmark:
         "results/benchmarks/{prefix}.samtools_index.benchmark.txt",
-    wrapper:
-        "file:wrappers/samtools/index"
+    shell:
+        "samtools index {input} {output} 2>{log}"

@@ -8,8 +8,8 @@ rule fastqc:
         "logs/fastqc/{sample}-{unit}.log",
     benchmark:
         "results/benchmarks/{sample}-{unit}.fastqc.benchmark.txt",
-    wrapper:
-        "file:wrappers/fastqc"
+    script:
+        "../../scripts/qc/fastqc.py"
 
 
 rule samtools_stats:
@@ -21,10 +21,10 @@ rule samtools_stats:
         "logs/samtools-stats/{sample}-{unit}.log",
     benchmark:
         "results/benchmarks/{sample}-{unit}.samtools_stats.benchmark.txt",
-    wrapper:
-        "file:wrappers/samtools/stats"
+    shell:
+        "samtools stats {input} > {output} 2>{log}"
 
-"""
+
 rule multiqc:
     input:
         expand(
@@ -43,6 +43,5 @@ rule multiqc:
         ),
     log:
         "logs/multiqc.log",
-    wrapper:
-        "file:wrappers/multiqc"
-"""
+    script:
+        "../../scripts/qc/multiqc.py"
