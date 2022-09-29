@@ -26,6 +26,38 @@ def fun(record):
         return value["GT"]
 
 
+def repalce_html(html_file):
+    """
+    repalce html logo
+    """
+    JSAPI = CU_PATH.parents[2]/"js/jsapi"
+    logo_file = CU_PATH.parents[2]/"templates/html/logo.html"
+    with open(JSAPI, 'r') as file:
+        replace_content = file.read()
+        replace_content = "  "+'<script type="text/javascript">'+" "+replace_content+'</script>'
+    with open(logo_file, 'r') as file:
+        logo_content = file.read()
+        
+    sample_name = html_file.rsplit("/",1)[1].split(".")[0]
+    
+    output_html = Path(html_file).parents[0]/f'{sample_name}_sgr.html'
+    
+    with open(html_file, 'r') as file:
+        fcontent = file.readlines()
+        with open(output_html, 'w') as fp:
+            for line in fcontent:
+                if line.find('http://www.google.com/jsapi') != -1:
+                    line = replace_content
+                if line.find('<a href="http://www.ensembl.org/">') != -1:
+                    line = logo_content
+                if line.find('<a href="http://www.ensembl.org/vep">') != -1:
+                    line = ""
+                fp.write(line)
+                
+    cmd_clean_html = (f"rm {html_file}")
+    subprocess.check_call(cmd_clean_html,shell=True)
+
+
 class Annotate():
     """
     
@@ -86,6 +118,7 @@ class Annotate():
             f"bcftools view -O{fmt} > {self.calls_output}"
         )
         debug_subprocess_call(cmd)
+        repalce_html(self.stats)
 
     @add_log
     def vcf2tsv(self):
@@ -106,8 +139,7 @@ class Split_vcf():
     """
     Each sample is split from the whole and its own report file is generated.
     """
-    def __init__(self,qc,outdir):
-        self.qc = qc
+    def __init__(self,outdir):
         self.outdir = Path(outdir)
 
         # input 
@@ -160,24 +192,9 @@ class Split_vcf():
                     f"bcftools view -O{fmt} > {outdir}/{sample_name}_annotated.vcf.gz;"
                 )
         subprocess.check_call(cmd_html,shell=True)
-
-        JSAPI = CU_PATH.parents[2]/"js/jsapi"
-        with open(JSAPI, 'r') as file:
-            replace_content = file.read()
-            replace_content = "  "+'<script type="text/javascript">'+" "+replace_content+'</script>'
-
+        
         html_file = f'{outdir}/{sample_name}.html'
-        with open(html_file, 'r') as file:
-            fcontent = file.readlines()
-            output_html = f"{outdir}/{sample_name}_read.html"
-            with open(output_html, 'w') as fp:
-                for line in fcontent:
-                    if line.find('http://www.google.com/jsapi') != -1:
-                        line = replace_content
-                    fp.write(line)
-                    
-        cmd_clean_html = (f"rm {html_file}")
-        subprocess.check_call(cmd_clean_html,shell=True)
+        repalce_html(html_file)
 
         cmd_line_vcf2tsv = (
                     f"bcftools view --apply-filter PASS --output-type u {outdir}/{sample_name}_annotated.vcf.gz | "
@@ -206,7 +223,7 @@ def main():
     outdir = config['outdir']
     run_annotate = Annotate(outdir)
     run_annotate.run()
-    run_split =  Split_vcf('yes',outdir)
+    run_split =  Split_vcf(outdir)
     run_split.run()
 
 

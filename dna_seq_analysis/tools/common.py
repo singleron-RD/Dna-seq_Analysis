@@ -7,20 +7,18 @@ import yaml
 import pandas as pd
 from pathlib import Path
 import argparse
-
+import pathlib
 
 ###### date #####
 
 CU_PATH = Path(__file__).absolute()
+
 
 parser = argparse.ArgumentParser(description='dna-seq_analysis')
 parser.add_argument('--config_path',help='The position where the config.yaml is located ',required=True)
 args = parser.parse_args()
 config_path = args.config_path
 
-
-
-config_path = config_path
 configfile = Path(config_path)/"config.yaml"
 with open(configfile,"r") as test_file:
     config = yaml.load(test_file,Loader=yaml.FullLoader)
@@ -31,6 +29,7 @@ if Path(config["units"]).exists():
 resource_dir = Path(config['resource'])
 
 ###### function #####
+
 def add_log(func):
     '''
     logging start and done.
@@ -132,6 +131,14 @@ def get_sample_bams(units,dirs,sample):
     bams = [f"{str(dirs)}/recal/{sample}-{num}.bam" for num in unit]
     return bams
 
+
+def get_bam_file(file_path, pattern="*.bam"):
+    all_file = []
+    files = pathlib.Path(file_path).rglob(pattern)
+    for file in files:
+        if pathlib.Path.is_file(file):
+            all_file.append(file)
+    return all_file
 
 
 def get_call_variants_params(contig):

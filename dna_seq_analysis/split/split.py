@@ -59,21 +59,22 @@ class Split_fastq():
                 header1, seq1, qual1 = record1.name, record1.sequence, record1.quality
                 header2, seq2, qual2 = record2.name, record2.sequence, record2.quality
                 
-                adapter_distance = {adapter:hm_dis(seq1[:9],adapter_dict[adapter])  for adapter in adapter_dict}  # 根据r1拆分，测试
+                adapter_distance = {adapter:hm_dis(seq2[:9],adapter_dict[adapter])  for adapter in adapter_dict}
                 match_adapter = [k for k,v in adapter_distance.items() if v<=1]
 
                 if len(match_adapter) == 0:
-                    out_notinfq1.write(f'@{header1}\n{seq1}\n+\n{qual1}\n')
-                    out_notinfq2.write(f'@{header2}\n{seq2}\n+\n{qual2}\n')    
+                    out_notinfq1.write(f'@{header1}\n{seq1[9:]}\n+\n{qual1[9:]}\n')
+                    out_notinfq2.write(f'@{header2}\n{seq2[9:]}\n+\n{qual2[9:]}\n')    
                 else:
-                    out_fq1_dict[match_adapter[0]].write(f'@{header1}\n{seq1[9:]}\n+\n{qual1[9:]}\n')
-                    out_fq2_dict[match_adapter[0]].write(f'@{header2}\n{seq2[9:]}\n+\n{qual2[9:]}\n')
+                    out_fq1_dict[match_adapter[0]].write(f'@{header1}\n{seq1}\n+\n{qual1}\n')
+                    out_fq2_dict[match_adapter[0]].write(f'@{header2}\n{seq2}\n+\n{qual2}\n')
         out_notinfq1.close()
         out_notinfq2.close()
         for adapter in adapter_dict:
             out_fq1_dict[adapter].close()
             out_fq2_dict[adapter].close()
-            
+
+        
 
     def run(self,params):
         fq1,fq2,outdir_fq,sample_name,adapter_dict = params
@@ -86,7 +87,6 @@ class Split_fastq():
         """
         args_dict = self.args_dict
         
-
         param_list = []
         for sample in args_dict:
             sample_name = args_dict[sample]['sample_name']
@@ -96,7 +96,23 @@ class Split_fastq():
             outdir_fq = args_dict[sample]['fq_outdir']
 
             Path(outdir_fq).mkdir(parents=True,exist_ok=True)
-    
+            
+            ## add fastq 
+            if len(fq1.split(",")) > 1:
+                tmp_fastq = Path.mkdir(outdir_fq/"tmp_fastq",parents=True,exist_ok=True)    
+                fq1_list = fq1.split(",")
+                fq2_list = fq2.split(",")
+                soft = "zcat" if fq1_list[0][-2:] == 'gz' else 'cat'
+                fastq1 = " ".join(fq1_list)
+                fastq2 = " ".join(fq2_list)
+                cmd_r1 = f"{soft} {fastq1}|gzip > {tmp_fastq}/{sample_name}_R1.fastq.gz"
+                cmd_r2 = f"{soft} {fastq2}|gzip > {tmp_fastq}/{sample_name}_R2.fastq.gz"
+                debug_subprocess_call(cmd_r1)
+                debug_subprocess_call(cmd_r2)
+                fq1 = f'{tmp_fastq}/{sample_name}_R1.fastq.gz'
+                fq2 = f'{tmp_fastq}/{sample_name}_R2.fastq.gz'
+        
+
             adapter_dict = split_adapter(fa)
             
             for adapter in adapter_dict:

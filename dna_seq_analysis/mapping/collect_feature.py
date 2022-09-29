@@ -14,7 +14,7 @@ class Picard:
 
         self.Metric = namedtuple("Metric", "name value total fraction")
         self.metric_list = []
-        self.picard_region_log = f'{self.sample}_region.log'
+        self.picard_region_log = f'{self.outdir}/{self.sample}_region.log'
         self.stat_file = f'{self.outdir}/{self.sample}_stat.txt'
 
     def picard(self):

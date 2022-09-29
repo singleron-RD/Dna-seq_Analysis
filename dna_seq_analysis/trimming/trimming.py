@@ -1,4 +1,3 @@
-from email.policy import default
 from pathlib import Path
 import multiprocessing
 from tqdm import tqdm
@@ -6,19 +5,18 @@ from tqdm import tqdm
 from dna_seq_analysis.tools.common import *
 
 
-
 # Trim reads
 class Trim_reads():
     """
     trim reads
     """
-    def __init__(self,args,fastq,wildcards,trimmer,mod):
+    def __init__(self,fastq,outdir,wildcards,trimmer,mod):
         self.fastq = fastq
         self.mod = mod
-        self.outdir = Path(args.outdir) #
+        self.outdir = Path(outdir)
         self.sample,self.unit = wildcards
         self.trimmer = trimmer
-        self.threads = int(args.thread) #
+        self.threads = 4
 
         # log
         self.log_dir = self.outdir/"logs/trim_reads"
@@ -116,30 +114,19 @@ class Trim_reads():
 def run(params):
     """
     """
-    args,fastq,wildcards,trimmer,mod = params
-    app = Trim_reads(args=args,fastq=fastq,wildcards=wildcards,trimmer=trimmer,mod=mod)
+    fastq,outdir,wildcards,trimmer,mod = params
+    app = Trim_reads(fastq=fastq,outdir=outdir,wildcards=wildcards,trimmer=trimmer,mod=mod)
     app.trim_read()
 
 
 def main():
-    #outdir = config['outdir']
+    outdir = config['outdir']
     param_list = []
-    parser = s_common()
-    parser = get_opts_trimming(parser,sub_program=False)
-    args = parser.parse_args()
-
-    config_path = args.config_path
-    configfile = Path(config_path)/"config.yaml"
-    with open(configfile,"r") as test_file:
-        config = yaml.load(test_file,Loader=yaml.FullLoader)
-    units = pd.read_table(config["units"], dtype=str).set_index(["sample", "unit"], drop=False)
-
-
     for wildcards in units.index:
         fastq = get_fastq(units,wildcards)
         mod = 'PE' if len(fastq) > 1 else 'SE'
         trimmer = " ".join(config["params"]["trimmomatic"][f"{mod}".swapcase()]['trimmer'])
-        param_list.append((args,fastq,wildcards,trimmer,mod))
+        param_list.append((fastq,outdir,wildcards,trimmer,mod))
 
     with multiprocessing.Pool(len(param_list)) as p:
         r=list(tqdm(p.map(run,param_list),total=len(param_list),desc='Trim reads '))
@@ -147,12 +134,5 @@ def main():
     p.join()
 
 
-def get_opts_trimming(parser, sub_program=True):
-    parser.add_argument(
-        '--thread',
-        help='Thread to use.',
-        default = 4
-    )
-    if sub_program:
-        print('')
-    return parser
+if __name__ == '__main__':
+    main()

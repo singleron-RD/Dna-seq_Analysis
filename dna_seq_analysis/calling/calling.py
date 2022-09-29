@@ -102,7 +102,7 @@ class Combine():
             gvcfs = [f"{str(self.outdir)}/called/{sample}.{chro}.g.vcf.gz" for sample in samples_set]
             gvcfs = ' '.join(list(map("-V {}".format, gvcfs)))
             cmd = (
-                "gatk --java-options '-Xmx4g' CombineGVCFs "
+                "gatk --java-options '-Xmx10g' CombineGVCFs "
                 f"{gvcfs} "
                 f"-R {self.ref} "
                 f"-O {str(self.outdir)}/called/all.{chro}.g.vcf.gz > {_log}"
@@ -119,7 +119,7 @@ class Combine():
         for chro in self.chr_list:
             _log = self.log_dir/f"GenotypeGVCFs-{chro}.log"
             cmd=(
-                f"gatk --java-options '-Xmx10g' GenotypeGVCFs {extra} "
+                f"gatk --java-options '-Xmx20g' GenotypeGVCFs {extra} "
                 f"-V {str(self.outdir)}/called/all.{chro}.g.vcf.gz "
                 f"-R {self.ref} "
                 f"-O {str(self.outdir)}/genotyped/all.{chro}.vcf.gz > {_log}"
