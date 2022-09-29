@@ -1,4 +1,4 @@
-name: test_snakemake
+name: dna-seq-analysis1.0
 channels:
   - https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/free/
   - conda-forge
@@ -12,7 +12,6 @@ dependencies:
   - ca-certificates
   - certifi
   - openssl
-  - snakemake=7.3.8
   - ensembl-vep==102
   - seqtk
   - rust-bio-tools==0.38.2

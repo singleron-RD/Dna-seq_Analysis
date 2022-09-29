@@ -1,0 +1,30 @@
+conda-forge::python=3.9
+bioconda::star=2.6.1b
+bioconda::subread=2.0.1
+bioconda::samtools=1.12
+conda-forge::r-argparser
+conda-forge::r-tidyverse
+conda-forge::r-deldir=1.0_6
+conda-forge::r-vcfr
+conda-forge::r-reshape2
+imperial-college-research-computing::mixcr=3.0.3
+bioconda::bcftools=1.12
+bioconda::gatk4
+conda-forge::gcc
+bioconda::trust4=1.0.7
+conda-forge::r-argparse
+conda-forge::r-seurat=4.0.1
+bcftools==1.12
+  - ca-certificates
+  - certifi
+  - openssl
+  - ensembl-vep==102
+  - seqtk
+  - rust-bio-tools==0.38.2
+  - samtools
+  - picard==2.20.1
+  - bwa==0.7.17
+  - multiqc==1.10.1
+  - gatk4==4.2.0.0
+  - fastqc==0.11.9
+  - trimmomatic==0.36

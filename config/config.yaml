@@ -1,8 +1,7 @@
-split_fq: false
-samples: config/samples.tsv
 units: config/units.tsv
 mapfile: config/mapfile
-
+outdir: /Personal/wuqi/dna-seq/results
+resource: /Personal/wuqi/dna-seq/resources
 
 ref:
   # ensembl species name

@@ -1,3 +1,3 @@
-sample_name	fq_outdir	fa	fq1	fq2	mod
-test1	/SGRNJ06/randd/USER/wuqi/Dna_seq/Workdir/Repository/test_data/fastq/	/SGRNJ06/randd/USER/wuqi/Dna_seq/Workdir/Repository/test_data/file/index1.fa	/SGRNJ06/randd/USER/wuqi/Dna_seq/Workdir/Repository/test_data/fastq/test_R1.fastq	/SGRNJ06/randd/USER/wuqi/Dna_seq/Workdir/Repository/test_data/fastq/test_R2.fastq	fq2
-test2	/SGRNJ06/randd/USER/wuqi/Dna_seq/Workdir/Repository/test_data/fastq/	/SGRNJ06/randd/USER/wuqi/Dna_seq/Workdir/Repository/test_data/file/index2.fa	/SGRNJ06/randd/USER/wuqi/Dna_seq/Workdir/Repository/test_data/fastq/test_R1.fastq	/SGRNJ06/randd/USER/wuqi/Dna_seq/Workdir/Repository/test_data/fastq/test_R2.fastq	fq2
+sample_name	fq_outdir	fa	fq1	fq2
+test1	/Personal/wuqi/gitrepo/Dna-seq_Analysis/test_data/fastq/	/Personal/wuqi/gitrepo/Dna-seq_Analysis/test_data/file/index1.fa	/Personal/wuqi/gitrepo/Dna-seq_Analysis/test_data/fastq/test_R1.fastq	/Personal/wuqi/gitrepo/Dna-seq_Analysis/test_data/fastq/test_R2.fastq
+test2	/Personal/wuqi/gitrepo/Dna-seq_Analysis/test_data/fastq/	/Personal/wuqi/gitrepo/Dna-seq_Analysis/test_data/file/index2.fa	/Personal/wuqi/gitrepo/Dna-seq_Analysis/test_data/fastq/test_R1.fastq	/Personal/wuqi/gitrepo/Dna-seq_Analysis/test_data/fastq/test_R2.fastq
