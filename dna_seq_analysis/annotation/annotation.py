@@ -30,8 +30,8 @@ def repalce_html(html_file):
     """
     repalce html logo
     """
-    JSAPI = CU_PATH.parents[2]/"js/jsapi"
-    logo_file = CU_PATH.parents[2]/"templates/html/logo.html"
+    JSAPI = CU_PATH.parents[1]/"templates/js/jsapi"
+    logo_file = CU_PATH.parents[1]/"templates/html/logo.html"
     with open(JSAPI, 'r') as file:
         replace_content = file.read()
         replace_content = "  "+'<script type="text/javascript">'+" "+replace_content+'</script>'

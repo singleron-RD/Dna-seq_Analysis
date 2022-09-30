@@ -3,6 +3,7 @@ from pathlib import Path
 import multiprocessing
 from tqdm import tqdm
 from collections import defaultdict
+import pysam
 
 from dna_seq_analysis.tools.common import *
 
@@ -81,25 +82,11 @@ class Map_reads():
             f" {self.trimmed_reads1} {self.trimmed_reads2}"
             " | " + pipe_cmd + f")"
         )
-        debug_subprocess_call(cmd)
-        '''
-        star_cmd = [
-            'STAR',
-            '--runThreadN', str(self.thread),
-            '--genomeDir', self.genome,
-            '--readFilesIn', {self.trimmed_reads1} {self.trimmed_reads2},
-            '--outFilterMultimapNmax', str(self.multi_max),
-            '--outFileNamePrefix', self.outPrefix,
-            '--outSAMtype', 'BAM', 'Unsorted',  # controls sort by Coordinate or not
-            '--outFilterMatchNmin', str(self.outFilterMatchNmin)
-        ]
-        if self.out_unmapped:
-            star_cmd += ['--outReadsUnmapped', 'Fastx']
-        if self.trimmed_reads1[-3:] == ".gz":
-            star_cmd += ['--readFilesCommand', 'zcat']
-        star_cmd = ' '.join(star_cmd)
-        '''
-
+        if not Path(self.outdir/f"mapped/{self.sample}-{self.unit}.sorted.bam").exists():
+            debug_subprocess_call(cmd)
+        
+        
+        
 
 
 class Get_recal():
@@ -149,9 +136,11 @@ class Get_recal():
                 f"{extra} "  # Tool and its subcommand
                 f"I={self.mapped_bam} "  # Input bam(s)
                 f"O={self.markduplicates_bam} "  # Output bam
-                f"M={self.markduplicates_metrics} > {_log}"  # Output metrics
+                f"M={self.markduplicates_metrics} "
+                "ASO=coordinate > {_log}"  # Output metrics
             )
-        debug_subprocess_call(cmd)
+        if not Path(self.markduplicates_bam).exists():
+            debug_subprocess_call(cmd)
 
 
     def recalibrate_base_qual(self):
@@ -173,7 +162,8 @@ class Get_recal():
             f"-R {self.ref} -I {bam} "
             f"-O {self.recal_grp} {known} > {_log}"
         )
-        debug_subprocess_call(cmd)
+        if not Path(self.recal_bam).exists():
+            debug_subprocess_call(cmd)
         
 
     def apply_base_quality_recal(self):
@@ -189,34 +179,35 @@ class Get_recal():
             f"--bqsr-recal-file {self.recal_grp} "
             f"-O {self.recal_bam} > {_log}" 
         )
-        debug_subprocess_call(cmd)
         _cmd = (f"samtools index {self.recal_bam} {self.recal_bam_bai}")
-        debug_subprocess_call(_cmd)
+        if not Path(self.recal_bam).exists():
+            debug_subprocess_call(cmd)
+            debug_subprocess_call(_cmd)
 
 
     def qc(self):
-        _bam = str(self.recal_bam)
-        name = _bam.rsplit('/',1)[1].rsplit('.',1)[0]
+        _bam = str(self.mapped_bam)
+        name = _bam.rsplit('/',1)[1].rsplit('.',2)[0]
         
-        output_samtools=f"{str(self.outdir)}/recal/{name}_mapping.txt"
+        output_samtools=f"{str(self.outdir)}/mapped/{name}_mapping.txt"
         cmd_samtools = (f"samtools stats {_bam} > {output_samtools}")
-        cmd_python = (f"python {str(CU_PATH.parents[2])}/dna_seq_analysis/mapping/collect_feature.py --bam {_bam} --outdir {str(self.outdir)}/recal --refflat {self.refflat} --sample {name}")
+        cmd_python = (f"python {str(CU_PATH.parents[1])}/mapping/collect_feature.py --bam {_bam} --outdir {str(self.outdir)}/mapped --refflat {self.refflat} --sample {name}")
         
-        if not Path(f"{str(self.outdir)}/recal/{name}_mapping.txt").exists():
+        if not Path(f"{str(self.outdir)}/mapped/{name}_mapping.txt").exists():
             debug_subprocess_call(cmd_samtools)
             debug_subprocess_call(cmd_python)
 
         # coverage
-        cmd_coverage = (f'/SGRNJ01/Public/Software/conda_env/pacbio_v1/bin/samtools coverage {str(self.recal_bam)} > {str(self.outdir)}/recal/{name}_frag.cov')
+        cmd_coverage = (f'/SGRNJ01/Public/Software/conda_env/pacbio_v1/bin/samtools coverage {str(self.mapped_bam)} > {str(self.outdir)}/mapped/{name}_frag.cov')
         debug_subprocess_call(cmd_coverage)
 
-        with open(f"{str(self.outdir)}/recal/{name}_frag.cov") as cov:
+        with open(f"{str(self.outdir)}/mapped/{name}_frag.cov") as cov:
             i = 0 
             for line in cov.readlines():
                 if line.startswith("202"):
                     i += 1
 
-        df = pd.read_csv(f'{str(self.outdir)}/recal/{name}_frag.cov',skiprows=i,sep="\t")
+        df = pd.read_csv(f'{str(self.outdir)}/mapped/{name}_frag.cov',skiprows=i,sep="\t")
         # 
         try:
             index = df.loc[df['#rname'] =="#rname"].index.tolist()[0]
@@ -233,13 +224,13 @@ class Get_recal():
         df = df[['#rname','coverage','meandepth']]
         df['coverage'] = df['coverage'].map(lambda x:str(x)[:5]+"%")
         df['meandepth'] = df['meandepth'].map(lambda x:str(x)+"X")
-        df.to_csv(f"{str(self.outdir)}/recal/{name}_chrom.coverage.txt",sep='\t',index=None)
-        with open(f"{str(self.outdir)}/recal/{name}_chrom.coverage.txt",'r+') as f:
+        df.to_csv(f"{str(self.outdir)}/mapped/{name}_chrom.coverage.txt",sep='\t',index=None)
+        with open(f"{str(self.outdir)}/mapped/{name}_chrom.coverage.txt",'r+') as f:
             content = f.read()
             f.seek(0,0)
             f.write(f'# mean coverage: {mean_coverage*100}%\n# mean depth: {mean_depth}X\n'+content)
 
-        cmd_clean = (f'rm {str(self.outdir)}/recal/{name}_frag.cov')
+        cmd_clean = (f'rm {str(self.outdir)}/mapped/{name}_frag.cov')
         debug_subprocess_call(cmd_clean)
         
         
@@ -257,24 +248,27 @@ class Get_recal():
     @add_log
     def merge(self):
         # merge stat
-        bam_list = get_bam_file(f"{str(self.outdir)}/recal") 
+        bam_list = get_bam_file(f"{str(self.outdir)}/mapped") 
         dic = defaultdict(lambda:defaultdict(list))
         for bam in bam_list:
-            name = str(bam).rsplit('/',1)[1].rsplit('.',1)[0]
+            name = str(bam).rsplit('/',1)[1].rsplit('.',2)[0]
             # raw reads and mapping read ratio
-            with open(f"{str(self.outdir)}/recal/{name}_mapping.txt") as mapping:
+            with pysam.FastxFile(f'{str(self.outdir)}/trimmed/{name}.1.fastq.gz') as fq:
+                raw_reads = 0
+                for _ in fq:
+                    raw_reads += 1
+                raw_reads = raw_reads*2
+                dic[name]["Raw Reads"] = raw_reads
+            with open(f"{str(self.outdir)}/mapped/{name}_mapping.txt") as mapping:
                 i = 0
                 for line in mapping.readlines():
                     i += 1
-                    if (i == 8):
-                        raw_reads = line.split(":")[1].strip()
-                        dic[name]["Raw Reads"] = raw_reads
                     if (i == 15):
                         mapped_paired_reads = line.split(":")[1].split("#")[0].strip()
                         dic[name]["Mapped Paired Reads"] = mapped_paired_reads
                         break
-                mapped_rate = int(mapped_paired_reads)/int(raw_reads)
-                dic[name]["Mapped Reads Rate"] = f'{str(mapped_rate*100)[:5]}%'
+            mapped_rate = int(mapped_paired_reads)/int(raw_reads)
+            dic[name]["Mapped Reads Rate"] = f'{str(mapped_rate*100)[:5]}%'
             # percent duplication
             with open(f"{str(self.outdir)}/qc/dedup/{name}.metrics.txt") as dedup:
                 i = 0
@@ -285,7 +279,7 @@ class Get_recal():
                         dic[name]['Percent Duplication'] = f'{str(Duplication*100)[:5]}%'
                         break
             # mean depth
-            with open(f"{str(self.outdir)}/recal/{name}_chrom.coverage.txt") as cov:
+            with open(f"{str(self.outdir)}/mapped/{name}_chrom.coverage.txt") as cov:
                     for line in cov.readlines():
                         if line.startswith("# mean coverage"):
                             mean_coverage = line.strip().split(":")[1]
@@ -294,7 +288,7 @@ class Get_recal():
                             mean_depth = line.strip().split(":")[1]
                             dic[name]["Mean Depth"] = mean_depth
             # mapped regions
-            with open(f"{str(self.outdir)}/recal/{name}_stat.txt") as stat:
+            with open(f"{str(self.outdir)}/mapped/{name}_stat.txt") as stat:
                 line_list = [line.strip() for line in stat.readlines()]
                 Base_Pairs_Mapped_to_Exonic_Regions = line_list[0].split(":")[1]
                 dic[name]["Base Pairs Mapped to Exonic Regions"] = Base_Pairs_Mapped_to_Exonic_Regions
@@ -303,7 +297,7 @@ class Get_recal():
                 Base_Pairs_Mapped_to_Intergenic_Regions = line_list[2].split(":")[1]
                 dic[name]["Base Pairs Mapped to Intergenic Regions"] = Base_Pairs_Mapped_to_Intergenic_Regions 
         merge_df = pd.DataFrame.from_dict(dic,orient="index")
-        merge_df.to_csv(f"{str(self.outdir)}/recal/merge.tsv",sep="\t")
+        merge_df.to_csv(f"{str(self.outdir)}/mapped/merge.tsv",sep="\t")
 
 
 @add_log

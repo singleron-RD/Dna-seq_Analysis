@@ -1,6 +1,6 @@
 units: config/units.tsv
 mapfile: config/mapfile
-outdir: /Personal/wuqi/dna-seq/results
+outdir: /Personal/wuqi/dna-seq/results_test
 resource: /Personal/wuqi/dna-seq/resources
 
 ref:
