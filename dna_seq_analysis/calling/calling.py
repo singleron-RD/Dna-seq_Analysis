@@ -11,10 +11,10 @@ class Calling():
     """
     calling vcf
     """
-    def __init__(self,wildcards,outdir,bed):
+    def __init__(self,wildcards,outdir,chro):
         self.sample,_ = wildcards
         self.outdir = Path(outdir)
-        self.bed = bed
+        self.chro = chro 
         
         # input
         self.ref = str(resource_dir/"genome.fasta")
@@ -27,12 +27,6 @@ class Calling():
 
         genotyped_dir = self.outdir/"genotyped"
         genotyped_dir.mkdir(parents=True,exist_ok=True)
-
-        # bed file
-        self.chr_list = []
-        with open(self.bed,'r') as fh:
-            for chro in fh.readlines():
-                self.chr_list.append(chro.strip())
 
         # log
         self.log_dir = self.outdir/"logs/called"
@@ -48,17 +42,17 @@ class Calling():
         if self.known:
             known = "--dbsnp " + self.known
 
-        for chro in self.chr_list:
-            extra = get_call_variants_params(chro)
-            _log = self.log_dir/f"HaplotypeCaller-{self.sample}-{chro}.log"
-            cmd = (
-                    f"gatk --java-options '-Xmx10g' HaplotypeCaller {extra} "
-                    f"-R {self.ref} {bams} "
-                    f"-ERC GVCF "
-                    f"-O {self.outdir}/called/{self.sample}.{chro}.g.vcf.gz {known} > {_log}"
-                    )
-            if  not Path(f"{self.outdir}/called/{self.sample}.{chro}.g.vcf.gz").exists():
-                debug_subprocess_call(cmd)
+        
+        extra = get_call_variants_params(self.chro)
+        _log = self.log_dir/f"HaplotypeCaller-{self.sample}-{self.chro}.log"
+        cmd = (
+                f"gatk --java-options '-Xmx10g' HaplotypeCaller {extra} "
+                f"-R {self.ref} {bams} "
+                f"-ERC GVCF "
+                f"-O {self.outdir}/called/{self.sample}.{self.chro}.g.vcf.gz {known} > {_log}"
+                )
+        if  not Path(f"{self.outdir}/called/{self.sample}.{self.chro}.g.vcf.gz").exists():
+            debug_subprocess_call(cmd)
 
 
     @add_log
@@ -69,24 +63,25 @@ class Calling():
         self.call_variants()
 
 
+def run_call(params):
+    """
+    """
+    wildcards,outdir,chro = params
+    app_calling = Calling(wildcards,outdir,chro)
+    app_calling.main()
+
+
 class Combine():
-    def __init__(self,outdir,bed):
+    def __init__(self,outdir,chro):
         self.outdir = Path(outdir)
-        self.bed = bed
+        self.chro = chro
         
         # input
         self.ref = str(resource_dir/"genome.fasta")
 
-
         # output
         genotyped_dir = self.outdir/"genotyped"
         genotyped_dir.mkdir(parents=True,exist_ok=True)
-
-        # bed file
-        self.chr_list = []
-        with open(self.bed,'r') as fh:
-            for chro in fh.readlines():
-                self.chr_list.append(chro.strip())
 
         # log
         self.log_dir = self.outdir/"logs/called"
@@ -97,16 +92,16 @@ class Combine():
         """
         """
         samples_set = set(units['sample'])
-        for chro in self.chr_list:
-            _log = self.log_dir/f"CombineGVCFs-{chro}.log"
-            gvcfs = [f"{str(self.outdir)}/called/{sample}.{chro}.g.vcf.gz" for sample in samples_set]
-            gvcfs = ' '.join(list(map("-V {}".format, gvcfs)))
-            cmd = (
-                "gatk --java-options '-Xmx10g' CombineGVCFs "
-                f"{gvcfs} "
-                f"-R {self.ref} "
-                f"-O {str(self.outdir)}/called/all.{chro}.g.vcf.gz > {_log}"
-            )
+        _log = self.log_dir/f"CombineGVCFs-{self.chro}.log"
+        gvcfs = [f"{str(self.outdir)}/called/{sample}.{self.chro}.g.vcf.gz" for sample in samples_set]
+        gvcfs = ' '.join(list(map("-V {}".format, gvcfs)))
+        cmd = (
+            "gatk --java-options '-Xmx10g' CombineGVCFs "
+            f"{gvcfs} "
+            f"-R {self.ref} "
+            f"-O {str(self.outdir)}/called/all.{self.chro}.g.vcf.gz > {_log}"
+        )
+        if  not Path(f"{str(self.outdir)}/called/all.{self.chro}.g.vcf.gz").exists():
             debug_subprocess_call(cmd)
 
 
@@ -116,31 +111,15 @@ class Combine():
         """
         extra = config["params"]["gatk"]["GenotypeGVCFs"]
         # Allow for either an input gvcf or GenomicsDB
-        for chro in self.chr_list:
-            _log = self.log_dir/f"GenotypeGVCFs-{chro}.log"
-            cmd=(
-                f"gatk --java-options '-Xmx20g' GenotypeGVCFs {extra} "
-                f"-V {str(self.outdir)}/called/all.{chro}.g.vcf.gz "
-                f"-R {self.ref} "
-                f"-O {str(self.outdir)}/genotyped/all.{chro}.vcf.gz > {_log}"
-            )
-            if  not Path(f"{self.outdir}/genotyped/all.{chro}.vcf.gz").exists():
-                debug_subprocess_call(cmd)
-
-
-    @add_log
-    def merge_variants(self):
-        """
-        """
-        ## merge_variants
-        _log = self.log_dir/f"MergeVcfs.log"
-        inputs = " ".join(f"INPUT={str(self.outdir)}/genotyped/all.{chro}.vcf.gz" for chro in self.chr_list)
-        cmd = (
-            "picard MergeVcfs -Xmx4g "
-            f"{inputs} "
-            f"OUTPUT={str(self.outdir)}/genotyped/all.vcf.gz > {_log}"
+        _log = self.log_dir/f"GenotypeGVCFs-{self.chro}.log"
+        cmd=(
+            f"gatk --java-options '-Xmx20g' GenotypeGVCFs {extra} "
+            f"-V {str(self.outdir)}/called/all.{self.chro}.g.vcf.gz "
+            f"-R {self.ref} "
+            f"-O {str(self.outdir)}/genotyped/all.{self.chro}.vcf.gz > {_log}"
         )
-        debug_subprocess_call(cmd)
+        if  not Path(f"{self.outdir}/genotyped/all.{self.chro}.vcf.gz").exists():
+            debug_subprocess_call(cmd)
 
 
     def main(self):
@@ -149,18 +128,31 @@ class Combine():
         """
         self.combine_calls()
         self.genotype_variants()
-        self.merge_variants()
 
 
-
-def run(params):
+def run_comine(params):
     """
     """
-    wildcards,outdir,bed = params
-    app_calling = Calling(wildcards,outdir,bed)
-    app_calling.main()
+    outdir,chro = params
+    app_combine = Combine(outdir,chro)
+    app_combine.main()
 
 
+@add_log
+def merge_variants(outdir,chr_list):
+    """
+    """
+    ## merge_variants
+    outdir = Path(outdir)
+    log_dir = outdir/"logs/called"
+    _log = log_dir/f"MergeVcfs.log"
+    inputs = " ".join(f"INPUT={str(outdir)}/genotyped/all.{chro}.vcf.gz" for chro in chr_list)
+    cmd = (
+        "picard MergeVcfs -Xmx4g "
+        f"{inputs} "
+        f"OUTPUT={str(outdir)}/genotyped/all.vcf.gz > {_log}"
+    )
+    debug_subprocess_call(cmd)
 
 
 def main():
@@ -174,28 +166,46 @@ def main():
             )
     debug_subprocess_call(cmd_bed)
 
-    param_list = []
-    for wildcards in units.index: 
-        param_list.append((wildcards,outdir,bed))
-
-    with multiprocessing.Pool(len(param_list)) as p:
-        r=list(tqdm(p.map(run,param_list),total=len(param_list),desc='Calling '))
-    p.close()
-    p.join()
-
-    app_combine = Combine(outdir,bed)
-    app_combine.main()
-
-    # clean
+    # thread
+    thread = 10
+    
+    # bed file
     chr_list = []
     with open(bed,'r') as fh:
         for chro in fh.readlines():
             chr_list.append(chro.strip())
     samples_set = set(units['sample'])
-    called_gvcfs = " ".join([f"{str(outdir)}/called/{sample}.{chro}.g.vcf.gz" for sample,chro in product(samples_set,chr_list)])
-    genotyped_gvcfs = " ".join(f"{str(outdir)}/genotyped/all.{chro}.vcf.gz" for chro in chr_list)
-    cmd_clean = (f"rm {called_gvcfs} {genotyped_gvcfs}")
-    debug_subprocess_call(cmd_clean)
+    
+    # call
+    call_param_list = []
+    for wildcards in units.index:
+        for chro in chr_list: 
+            call_param_list.append((wildcards,outdir,chro))
+    with multiprocessing.Pool(thread) as p:
+        r=list(tqdm(p.map(run_call,call_param_list),total=len(call_param_list),desc='Calling '))
+    p.close()
+    p.join()
+
+    # combine
+    combine_param_list = []
+    for chro in chr_list: 
+        combine_param_list.append((outdir,chro))
+    with multiprocessing.Pool(thread) as p:
+        r=list(tqdm(p.map(run_comine,combine_param_list),total=len(combine_param_list),desc='Calling '))
+    p.close()
+    p.join()
+    
+    # merge all varians
+    merge_variants(outdir,chr_list)
+
+    # clean
+    # factor Argument list too long
+    for rm_file in [f"{str(outdir)}/called/{sample}.{chro}.g.vcf.gz" for sample,chro in product(samples_set,chr_list)]:
+        filepath = Path(rm_file)
+        filepath.unlink()
+    for rm_file in [f"{str(outdir)}/genotyped/all.{chro}.vcf.gz" for chro in chr_list]:
+        filepath = Path(rm_file)
+        filepath.unlink()
 
 
 
