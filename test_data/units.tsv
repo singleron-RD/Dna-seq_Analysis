@@ -1,0 +1,5 @@
+sample	unit	platform	fq1	fq2
+test1_index_1	1	ILLUMINA	test_data/split_fq/test1_index_1_R1.fastq	test_data/split_fq/test1_index_1_R2.fastq
+test1_index_2	1	ILLUMINA	test_data/split_fq/test1_index_2_R1.fastq	test_data/split_fq/test1_index_2_R2.fastq
+test2_index_3	1	ILLUMINA	test_data/split_fq/test2_index_3_R1.fastq	test_data/split_fq/test2_index_3_R2.fastq
+test2_index_4	1	ILLUMINA	test_data/split_fq/test2_index_4_R1.fastq	test_data/split_fq/test2_index_4_R2.fastq

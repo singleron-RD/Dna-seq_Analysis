@@ -1,0 +1,15 @@
+conda-forge::python=3.11
+bioconda::bcftools==1.16
+bioconda::ensembl-vep==108
+bioconda::seqtk==1.3
+bioconda::bioawk
+bioconda::rust-bio-tools==0.38.2
+bioconda::samtools==1.16.1
+bioconda::picard==2.25
+bioconda::bwa==0.7.17
+bioconda::multiqc==1.13
+bioconda::gatk4==4.2.0.0
+bioconda::fastqc==0.11.9
+bioconda::trimmomatic==0.36
+bioconda::ucsc-gtftogenepred
+bioconda::cnvkit

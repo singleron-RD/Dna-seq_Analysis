@@ -1,0 +1,315 @@
+import pysam
+import pandas as pd
+import numpy as np
+from pathlib import Path
+import subprocess
+import os
+import gzip
+import matplotlib.pyplot as plt
+import matplotlib
+import unittest
+from dna_seq_analysis.tools.common import *
+
+matplotlib.use('Agg')
+
+GT_LIST_NOT = [(0, 0), (None, None)]
+
+
+
+def get_only_child_dir(path):
+    children = [child for child in path.iterdir() if child.is_dir()]
+    assert (
+        len(children) == 1
+    ), "Invalid VEP cache directory, only a single entry is allowed, make sure that cache was created with the snakemake VEP cache wrapper"
+    return children[0]
+
+
+def fun(record):
+    for _,value in record.samples.items():
+        return value["GT"]
+
+
+def repalce_html(html_file):
+    """
+    repalce html logo
+    """
+    JSAPI = CU_PATH.parents[1]/"templates/js/jsapi"
+    logo_file = CU_PATH.parents[1]/"templates/html/logo.html"
+    with open(JSAPI, 'r') as file:
+        replace_content = file.read()
+        replace_content = "  "+'<script type="text/javascript">'+" "+replace_content+'</script>'
+    with open(logo_file, 'r') as file:
+        logo_content = file.read()
+        
+    sample_name = html_file.rsplit("/",1)[1].split(".")[0]
+    
+    output_html = Path(html_file).parents[0]/f'{sample_name}_sgr.html'
+    
+    with open(html_file, 'r') as file:
+        fcontent = file.readlines()
+        with open(output_html, 'w') as fp:
+            for line in fcontent:
+                if line.find('http://www.google.com/jsapi') != -1:
+                    line = replace_content
+                if line.find('<a href="http://www.ensembl.org/">') != -1:
+                    line = logo_content
+                if line.find('<a href="http://www.ensembl.org/vep">') != -1:
+                    line = ""
+                fp.write(line)
+                
+    cmd_clean_html = (f"rm {html_file}")
+    subprocess.check_call(cmd_clean_html,shell=True)
+
+
+class Annotate():
+    """
+    
+    """
+    def __init__(self,outdir,resource_dir,args):
+        #self.sample,self.unit = wildcards
+        self.outdir = Path(outdir)
+        self.args = args
+        self.threads = args.thread
+        # input 
+        self.plugins = f"{resource_dir}/vep/plugins"
+        self.cache = f"{resource_dir}/vep/cache"
+        self.genome = f"{resource_dir}/genome.fasta"
+        
+        # output
+        self.calls = f"{str(self.outdir)}/07.filtered/all.vcf.gz"
+        self.vcf2tsv_file = f"{str(self.outdir)}/10.tables/calls.tsv.gz"
+        self.stats = f"{str(self.outdir)}/09.stats/all.stats.html"
+        self.calls_output = f"{str(self.outdir)}/08.annotated/all.vcf.gz"
+
+        annotated_dir = self.outdir/"08.annotated"
+        annotated_dir.mkdir(parents=True,exist_ok=True)
+        stats_dir = self.outdir/"09.stats"
+        stats_dir.mkdir(parents=True,exist_ok=True)
+        tables_dir = self.outdir/"10.tables"
+        tables_dir.mkdir(parents=True,exist_ok=True)
+
+        
+    @add_log
+    def annotation(self):
+        """
+        annotation all of sample
+        """
+        plugins = self.args.vep_plugins_param
+        extra = self.args.vep_param if self.args.vep_param else ''
+
+        fork = "--fork {}".format(self.threads) if self.threads > 1 else ""
+        load_plugins = f"--plugin {plugins},{self.plugins}/{plugins}_scores.txt"
+        
+
+        if self.calls.endswith(".vcf.gz"):
+            fmt = "z"
+        elif self.calls.endswith(".bcf"):
+            fmt = "b"
+        else:
+            fmt = "v"
+
+        if self.cache:
+            entrypath = get_only_child_dir(get_only_child_dir(Path(self.cache)))
+            species = entrypath.parent.name
+            release, build = entrypath.name.split("_")
+            cache = (f"--offline --cache --dir_cache {self.cache} --cache_version {release} --species {species} --assembly {build}")
+
+        # use vep108
+        cmd = (
+            f"bcftools view {self.calls} | "
+            f"vep {extra} {fork} "       
+            "--format vcf "
+            "--vcf --fields 'Allele,Consequence,IMPACT,SYMBOL,Gene,Feature_type,Feature,BIOTYPE,EXON,INTRON,HGVSc,HGVSp,cDNA_position,CDS_position,Protein_position' "
+            f"{cache} "
+            f"--dir_plugins {self.plugins} {load_plugins} "
+            "--force_overwrite "
+            f"--hgvs --fasta {self.genome} "
+            f"--output_file STDOUT --stats_file {self.stats} | "
+            f"bcftools view -O{fmt} > {self.calls_output}"
+        )
+        debug_subprocess_call(cmd)
+        repalce_html(self.stats)
+
+    @add_log
+    def vcf2tsv(self):
+        """
+        creat 10.tables/calls.tsv.gz
+        """
+        cmd = (f"bcftools view --apply-filters PASS --output-type u {self.calls} | "
+            "rbt vcf-to-txt -g --fmt DP AD --info ANN | "
+            f"gzip > {self.vcf2tsv_file}")
+        debug_subprocess_call(cmd)
+        
+    def run(self):
+        self.annotation()
+        self.vcf2tsv()
+        
+
+class Split_vcf():
+    """
+    Each sample is split from the whole and its own report file is generated.
+    """
+    def __init__(self,outdir,resource_dir,args):
+        self.outdir = Path(outdir)
+        self.args = args
+        self.threads = args.thread
+        # input 
+        self.plugins = f"{resource_dir}/vep/plugins"
+        self.cache = f"{resource_dir}/vep/cache"
+        self.calls = f"{str(self.outdir)}/08.annotated/all.vcf.gz"
+        self.genome = f"{resource_dir}/genome.fasta"
+
+    @add_log
+    def split(self,sample_name):
+        outdir = f"{str(self.outdir)}/11.split/{sample_name}"
+        Path(outdir).mkdir(parents=True,exist_ok=True)
+    
+        cmd_split = (f'bcftools view -s {sample_name} {self.calls} -Oz -o {outdir}/{sample_name}_all.vcf.gz')
+        subprocess.check_call(cmd_split,shell=True)
+
+        with pysam.VariantFile(f"{outdir}/{sample_name}_all.vcf.gz") as vcf_in:
+            with pysam.VariantFile(f"{outdir}/{sample_name}.vcf.gz",'w',header = vcf_in.header) as vcf_out:
+                for record in vcf_in:
+                    new_record = record.copy()
+                    gt = fun(record)
+                    if gt not in GT_LIST_NOT:
+                        vcf_out.write(new_record)
+        
+        cmd_clean_vcf = (f'rm {outdir}/{sample_name}_all.vcf.gz')
+        subprocess.check_call(cmd_clean_vcf,shell=True)
+
+        plugins = self.args.vep_plugins_param
+        extra = self.args.vep_param if self.args.vep_param else ''
+
+        fork = "--fork {}".format(self.threads) if self.threads > 1 else ""
+        load_plugins = f"--plugin {plugins},{self.plugins}/{plugins}_scores.txt"
+
+        if self.calls.endswith(".vcf.gz"):
+            fmt = "z"
+        elif self.calls.endswith(".bcf"):
+            fmt = "b"
+        else:
+            fmt = "v"
+
+        if self.cache:
+            entrypath = get_only_child_dir(get_only_child_dir(Path(self.cache)))
+            species = entrypath.parent.name
+            release, build = entrypath.name.split("_")
+            cache = (f"--offline --cache --dir_cache {self.cache} --cache_version {release} --species {species} --assembly {build}")
+
+
+        cmd_html = (
+                    f"bcftools view {outdir}/{sample_name}.vcf.gz | "
+                    f"vep {extra} {fork} "       
+                    "--format vcf "
+                    "--vcf --fields 'Allele,Consequence,IMPACT,SYMBOL,Gene,Feature_type,Feature,BIOTYPE,EXON,INTRON,HGVSc,HGVSp,cDNA_position,CDS_position,Protein_position' "
+                    f"{cache} "
+                    f"--dir_plugins {self.plugins} {load_plugins} "
+                    "--force_overwrite "
+                    f"--hgvs --fasta {self.genome} "
+                    f"--output_file STDOUT --stats_file {outdir}/{sample_name}.html | "
+                    f"bcftools view -O{fmt} > {outdir}/{sample_name}_annotated.vcf.gz;"
+                )
+        subprocess.check_call(cmd_html,shell=True)
+        
+        html_file = f'{outdir}/{sample_name}.html'
+        repalce_html(html_file)
+
+        cmd_line_vcf2tsv = (
+                    f"bcftools view --apply-filter PASS --output-type u {outdir}/{sample_name}_annotated.vcf.gz | "
+                    f"rbt vcf-to-txt -g --fmt DP AD --info ANN | "
+                    f"gzip > {outdir}/{sample_name}_calls.tsv.gz"
+                    )
+        subprocess.check_call(cmd_line_vcf2tsv,shell=True)
+
+
+    def run_split_vcf(self):
+        """
+        split {sample}vcf.gz from all.vcf.gz 
+        """
+        calls_file = f"{str(self.outdir)}/10.tables/calls.tsv.gz"
+        calls_df = pd.read_table(calls_file, header=[0, 1])
+        samples = [name for name in calls_df.columns.levels[0] if name != "VARIANT"]
+        for sample in samples:
+            self.split(sample)
+
+    @add_log
+    def run(self):
+        self.run_split_vcf()
+
+
+def plot_snv(split_dir):
+    snv_dict = {}
+    for sample in os.listdir(split_dir):
+        vcf_file = f'{split_dir}/{sample}/{sample}.vcf.gz'
+        i = 0
+        with gzip.open(vcf_file,'rb') as fh:
+            for line in fh.readlines():
+                s = line.decode()
+                if s.startswith("#"):
+                    continue
+                else:
+                    i += 1
+        snv_dict.update({sample:i})
+    df = (
+            pd.DataFrame.from_dict(snv_dict,orient='index')
+            .sort_index()
+            .reset_index()
+        )
+    df.columns = ['sample','total snvs']
+    fig,ax = plt.subplots(figsize=(16,14))
+    ax.bar(df['sample'],df['total snvs'],color='#0165fc',zorder=10)
+    y_max = df['total snvs'].max()
+    fig,ax = plt.subplots(figsize=(16,14))
+    ax.bar(df['sample'],df['total snvs'],color='#0165fc',zorder=10)
+    ax.set_ylim((0,y_max//5*6))
+    ax.set_yticks(np.arange(0,y_max//5*7,step=y_max//5),[str(x) for x in np.arange(0,y_max//5*7,step=y_max//5)])
+    ax.spines['right'].set_color('none')
+    ax.spines['left'].set_color('none')
+    ax.spines['top'].set_color('none')
+    ax.grid(which='major',axis='y',zorder=0)
+    ax.tick_params(left=False,bottom=False)
+    labels = ax.get_xticklabels()+ax.get_yticklabels()
+    [label.set_fontname('serif') for label in labels]
+    fontdict_lable={'size':17,
+            'color':'k',
+            'family':'serif'}
+    ax.set_ylabel('Total SNVs',fontdict=fontdict_lable)
+    # add title
+    titlefountdict = {'size':20,
+                      'color':'k',
+                      'family':'serif'
+                    }
+    ax.set_title('High SNV detection rate',titlefountdict,pad=20)
+    ax.set_xticklabels(labels=df['sample'].values.tolist(),rotation=15)
+    fig.savefig(f"{split_dir}/total_snv.pdf",dpi=1000,bbox_inches='tight')
+    fig.savefig(f"{split_dir}/total_snv.png",dpi=1000,bbox_inches='tight')
+
+
+@add_log
+def annotation(args):
+    config_path = args.config_path
+    config = parse_config(config_path)
+    outdir = config['outdir']
+    resource_dir = config['genomedir']
+    
+    run_annotate = Annotate(outdir,resource_dir,args)
+    run_annotate.run()
+    run_split =  Split_vcf(outdir,resource_dir,args)
+    run_split.run()
+    plot_snv(f'{outdir}/11.split')
+
+
+def get_opts_annotation(parser, sub_program=True):
+    parser.add_argument('--thread',help='Number of threads.', default=4,type=int)
+    parser.add_argument('--vep_param',help="Additional parameters for the called software. Need to be enclosed in quotation marks.\
+For example, `--{software}_param '--param1 value1 --param2 value2'`,`--vep_param '--sift b'`.")
+    parser.add_argument('--vep_plugins_param',help="Add any plugin from https://www.ensembl.org/info/docs/tools/vep/script/vep_plugins.html.Use named plugin.\
+Multiple plugins can be used by supplying the --vep_plugins_param flag multiple times. For example, `--vep_plugins_param 'LoFtool'`.",default='LoFtool')
+    
+    if sub_program:
+        parser = s_common(parser)
+    return parser
+
+if __name__ == "__main__":
+    unittest.main()
