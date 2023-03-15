@@ -3,12 +3,13 @@
 ```
     multi_wgs --config_path test_data/\
               --whether_split true\
+              --mapfile test_data/file/mapfile\
               --outdir ./\
               --species homo_sapiens\
               --release 108\
               --build GRCh38\
-              --thread 8\
-              --mapfile test_data/file/mapfile
+              --thread 8
+              
 ```
 Note: Please set the `whether_split` parameter to `true` and write the `mapfile` parameter.
 
@@ -20,21 +21,20 @@ Note: Please set the `whether_split` parameter to `true` and write the `mapfile`
               --species homo_sapiens\
               --release 108\
               --build GRCh38\
-              --thread 8\
-              --steps_not_run split
+              --thread 8
+              
 ```
 Note: Please set the `whether_split` parameter to `false` and write the `steps_not_run` parameter to `split` instead of the `mapfile` parameter.
 
 Note: If use the same reference genome, only need to run the ref module once, and then can adjust the `steps_not_run` parameter to `ref`.
 ```
     multi_wgs --config_path test_data/\
-              --whether_split false\
+              --whether_split true\
+              --mapfile test_data/file/mapfile\
               --outdir ./\
-              --species homo_sapiens\
-              --release 108\
-              --build GRCh38\
               --thread 8\
-              --steps_not_run ref,split
+              --steps_not_run ref
+
 ```
 
 ## Features

@@ -274,9 +274,9 @@ def ref(args):
     
     
 def get_opts_ref(parser, sub_program=True):
-    parser.add_argument('--species',help="Ensembl species name.",required=True)
-    parser.add_argument('--release',help="Ensembl release.",required=True,type=int)
-    parser.add_argument('--build',help="Genome build.",required=True)
+    parser.add_argument('--species',help="Ensembl species name.")
+    parser.add_argument('--release',help="Ensembl release.",type=int)
+    parser.add_argument('--build',help="Genome build.")
     parser.add_argument('--datatype',help="Sequence types.",choices=['dna','cdna','cds','ncrna','pep'],default='dna')
     parser.add_argument('--chromosome',help="Select a specific chromosome for analysis.")
     parser.add_argument('--type',help="Ensembl VCF (Variant Call Format) files types.",choices=['all','somatic','structural_variations'],default='all')

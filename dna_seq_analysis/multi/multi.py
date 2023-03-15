@@ -81,13 +81,23 @@ class Multi():
         if self.args.steps_run != 'all':
             self.steps_run = self.args.steps_run.strip().split(',')
         
+        if self.args.whether_split == 'false':
+            self.steps_not_run += ['split']
+            
+        if self.args.whether_split == 'true':
+            if not self.args.mapfile:
+                raise ValueError(f"If need to split the original sequence according to the index, please provide the corresponding mapfile file.")
+        
         if self.args.steps_not_run :
-            self.steps_not_run = self.args.steps_not_run.strip().split(',')
+            self.steps_not_run += self.args.steps_not_run.strip().split(',')
             # remove
             for step in self.steps_not_run:
                 if step in self.__STEPS__:
                     self.__STEPS__.remove(step)
         
+        if 'ref' not in self.steps_not_run:
+            if not (self.args.species and self.args.release and self.args.build):
+                raise ValueError(f"Please provide correct genome information.")
         
         if self.args.mod == 'sjm':
 
