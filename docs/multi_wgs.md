@@ -24,7 +24,7 @@ Note: Please set the `whether_split` parameter to `true` and write the `mapfile`
               --thread 8
               
 ```
-Note: Please set the `whether_split` parameter to `false` and write the `steps_not_run` parameter to `split` instead of the `mapfile` parameter.
+Note: Please set the `whether_split` parameter to `false`.
 
 Note: If use the same reference genome, only need to run the ref module once, and then can adjust the `steps_not_run` parameter to `ref`.
 ```
