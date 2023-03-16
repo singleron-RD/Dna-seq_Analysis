@@ -80,6 +80,7 @@ class Multi():
 
         if self.args.steps_run != 'all':
             self.steps_run = self.args.steps_run.strip().split(',')
+            self.steps_not_run = [step for step in self.__STEPS__ if step not in self.steps_run]
         
         if self.args.whether_split == 'false':
             self.steps_not_run += ['split']
@@ -266,7 +267,6 @@ job_end
                 fh.write(self.sjm_order)
         if self.args.mod == 'shell':
             text_head = ("#!/usr/bin/env bash\n"
-                 "set -euo pipefail\n"
                 )
             os.system('mkdir -p ./shell/')
             with open(f'./shell/run.sh', 'w') as f:

@@ -88,8 +88,6 @@ class Annotate():
         tables_dir = self.outdir/"10.tables"
         tables_dir.mkdir(parents=True,exist_ok=True)
 
-        
-    @add_log
     def annotation(self):
         """
         annotation all of sample
@@ -119,7 +117,7 @@ class Annotate():
             f"bcftools view {self.calls} | "
             f"vep {extra} {fork} "       
             "--format vcf "
-            "--vcf --fields 'Allele,Consequence,IMPACT,SYMBOL,Gene,Feature_type,Feature,BIOTYPE,EXON,INTRON,HGVSc,HGVSp,cDNA_position,CDS_position,Protein_position' "
+            "--vcf --fields 'Allele,Consequence,SYMBOL,Gene,Feature_type,BIOTYPE,HGVSc,HGVSp,cDNA_position,CDS_position,Protein_position,Amino_acids,Codons' "
             f"{cache} "
             f"--dir_plugins {self.plugins} {load_plugins} "
             "--force_overwrite "
@@ -130,7 +128,6 @@ class Annotate():
         debug_subprocess_call(cmd)
         repalce_html(self.stats)
 
-    @add_log
     def vcf2tsv(self):
         """
         creat 10.tables/calls.tsv.gz
@@ -139,7 +136,9 @@ class Annotate():
             "rbt vcf-to-txt -g --fmt DP AD --info ANN | "
             f"gzip > {self.vcf2tsv_file}")
         debug_subprocess_call(cmd)
-        
+    
+    
+    @add_log
     def run(self):
         self.annotation()
         self.vcf2tsv()
@@ -159,7 +158,6 @@ class Split_vcf():
         self.calls = f"{str(self.outdir)}/08.annotated/all.vcf.gz"
         self.genome = f"{resource_dir}/genome.fasta"
 
-    @add_log
     def split(self,sample_name):
         outdir = f"{str(self.outdir)}/11.split/{sample_name}"
         Path(outdir).mkdir(parents=True,exist_ok=True)
@@ -202,7 +200,7 @@ class Split_vcf():
                     f"bcftools view {outdir}/{sample_name}.vcf.gz | "
                     f"vep {extra} {fork} "       
                     "--format vcf "
-                    "--vcf --fields 'Allele,Consequence,IMPACT,SYMBOL,Gene,Feature_type,Feature,BIOTYPE,EXON,INTRON,HGVSc,HGVSp,cDNA_position,CDS_position,Protein_position' "
+                    "--vcf --fields 'Allele,Consequence,SYMBOL,Gene,Feature_type,BIOTYPE,HGVSc,HGVSp,cDNA_position,CDS_position,Protein_position,Amino_acids,Codons' "
                     f"{cache} "
                     f"--dir_plugins {self.plugins} {load_plugins} "
                     "--force_overwrite "
