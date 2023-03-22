@@ -52,7 +52,12 @@ class Calling():
                 f"-O {self.outdir}/05.called/{self.sample}.{self.chro}.g.vcf.gz {known} > {_log}"
                 )
         if  not Path(f"{self.outdir}/05.called/{self.sample}.{self.chro}.g.vcf.gz").exists():
-            debug_subprocess_call(cmd)
+            try:
+                debug_subprocess_call(cmd)
+            except subprocess.CalledProcessError as e:
+                print("Command failed with return code:", e.returncode)
+                print(cmd)
+                
 
 
     @add_log
@@ -168,9 +173,11 @@ def call(args):
     bed =  Path(outdir)/"05.called/regions.bed"
     cmd_bed = (
                 "bioawk -c fastx '{ print $name }' "
-                f"{resource_dir}/genome.fasta > {bed}"
+                f"{resource_dir}/genome.fasta > {bed};"
+                f"sed -i '/^[KGJ]/d' {bed}"
             )
     debug_subprocess_call(cmd_bed)
+    # bioawk -c fastx '{ print $name ":1-" length($seq) }
 
     units_file = f'{config_path}/units.tsv'
     units = get_units(units_file)
@@ -222,7 +229,6 @@ def get_opts_call(parser, sub_program=True):
     if sub_program:
         parser = s_common(parser)
     return parser
-
 
 
 if __name__ == '__main__':

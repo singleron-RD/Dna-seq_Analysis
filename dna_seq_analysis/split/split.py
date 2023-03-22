@@ -115,8 +115,8 @@ class Split_fastq():
                 soft = "zcat" if fq1_list[0][-2:] == 'gz' else 'cat'
                 fastq1 = " ".join(fq1_list)
                 fastq2 = " ".join(fq2_list)
-                cmd_r1 = f"{soft} {fastq1}|gzip > {tmp_fastq}/{sample_name}_R1.fastq.gz"
-                cmd_r2 = f"{soft} {fastq2}|gzip > {tmp_fastq}/{sample_name}_R2.fastq.gz"
+                cmd_r1 = f"{soft} {fastq1} |gzip > {tmp_fastq}/{sample_name}_R1.fastq.gz"
+                cmd_r2 = f"{soft} {fastq2} |gzip > {tmp_fastq}/{sample_name}_R2.fastq.gz"
                 debug_subprocess_call(cmd_r1)
                 debug_subprocess_call(cmd_r2)
                 fq1 = f'{tmp_fastq}/{sample_name}_R1.fastq.gz'

@@ -87,7 +87,7 @@ class Multi():
             
         if self.args.whether_split == 'true':
             if not self.args.mapfile:
-                raise ValueError(f"If need to split the original sequence according to the index, please provide the corresponding mapfile file.")
+                raise ValueError(f"If need to split the original sequence according to the index, please use `--mapfile` parameter provide the corresponding mapfile file.")
         
         if self.args.steps_not_run :
             self.steps_not_run += self.args.steps_not_run.strip().split(',')
@@ -98,7 +98,11 @@ class Multi():
         
         if 'ref' not in self.steps_not_run:
             if not (self.args.species and self.args.release and self.args.build):
-                raise ValueError(f"Please provide correct genome information.")
+                raise ValueError(f"Please use `--species --release --build` parameter provide correct genome information.")
+            
+        if 'annotation' not in self.steps_not_run:
+            if not (self.args.species and self.args.build):
+                raise ValueError(f"Please use `--species --build` parameter provide correct ensembl species name and genome build.")
         
         if self.args.mod == 'sjm':
 
@@ -172,6 +176,7 @@ job_end
                         cmd_line += f'--{arg} {arg_string} '
 
         return cmd_line
+
 
     def ref(self):
         step = "ref"
@@ -267,9 +272,10 @@ job_end
                 fh.write(self.sjm_order)
         if self.args.mod == 'shell':
             text_head = ("#!/usr/bin/env bash\n"
+                #"set -euxo pipefail\n"
                 )
-            os.system('mkdir -p ./shell/')
-            with open(f'./shell/run.sh', 'w') as f:
+            os.system(f'mkdir -p {self.args.outdir}/shell/')
+            with open(f'{self.args.outdir}/shell/run.sh', 'w') as f:
                 f.write(text_head)
                 f.write(self.shell)
 

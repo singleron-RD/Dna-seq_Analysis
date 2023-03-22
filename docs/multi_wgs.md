@@ -3,13 +3,12 @@
 ```
     multi_wgs --config_path test_data/\
               --whether_split true\
-              --mapfile test_data/file/mapfile\
               --outdir ./\
               --species homo_sapiens\
               --release 108\
               --build GRCh38\
-              --thread 8
-              
+              --thread 8\
+              --mapfile test_data/file/mapfile
 ```
 Note: Please set the `whether_split` parameter to `true` and write the `mapfile` parameter.
 
@@ -22,18 +21,19 @@ Note: Please set the `whether_split` parameter to `true` and write the `mapfile`
               --release 108\
               --build GRCh38\
               --thread 8
-              
 ```
-Note: Please set the `whether_split` parameter to `false`.
+Note: Please set the `whether_split` parameter to `false` and write the `steps_not_run` parameter to `split` instead of the `mapfile` parameter.
 
 Note: If use the same reference genome, only need to run the ref module once, and then can adjust the `steps_not_run` parameter to `ref`.
 ```
     multi_wgs --config_path test_data/\
               --whether_split true\
-              --mapfile test_data/file/mapfile\
               --outdir ./\
               --thread 8\
-              --steps_not_run ref
+              --steps_not_run ref\
+              --mapfile test_data/file/mapfile\
+              --species homo_sapiens\
+              --build GRCh38
 
 ```
 
@@ -167,7 +167,7 @@ use `--steps_not_run ref,split`.
 
 `--thread` Thread to use.
 
-`memory` The memory size used, the default is GB.
+`--memory` The memory size used, the default is GB.
 
 `--species` Ensembl species name.
 
@@ -197,6 +197,8 @@ Note that this parameter only takes effect when the `whether_split` parameter is
 `--trim_param` Additional parameters for the called software. Need to be enclosed in quotation marks.For example, `--{software}_param 'param1:value1 param2:value2'`,`--trim_param 'LEADING:3 TRAILING:3'`.
 
 `--remove_duplicates` Delete the duplicate sequence after comparison.
+
+`--downsample` Downsample the raw reads of all samples to a consistent level.
 
 `--intervals` One or more genomic intervals over which to operate.This argument may be specified 0 or more times.
 

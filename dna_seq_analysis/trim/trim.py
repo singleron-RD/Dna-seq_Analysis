@@ -71,17 +71,13 @@ class Trim_reads():
     @staticmethod
     def compose_input_gz(filename, threads):
         if filename.endswith(".gz") and threads > 0:
-            return "<(pigz -p {threads} --decompress --stdout {filename})".format(
-                threads=threads, filename=filename
-            )
+            return f'''<(pigz -p {threads} --decompress --stdout {filename})'''
         return filename
 
     @staticmethod
     def compose_output_gz(filename, threads, compression_level):
         if filename.endswith(".gz") and threads > 0:
-            return ">(pigz -p {threads} {compression_level} > {filename})".format(
-                threads=threads, compression_level=compression_level, filename=filename
-            )
+            return f'''>(pigz -p {threads} {compression_level} > {filename})'''
         return filename
 
 
@@ -102,15 +98,19 @@ class Trim_reads():
         trimmomatic_threads, input_threads, output_threads = self.distribute_threads(
             input_files, output_files, self.threads
         )
-
+        # Abandonment
         input_r1, input_r2 = [
             self.compose_input_gz(filename, input_threads) for filename in input_files
         ]
 
+        input_r1, input_r2 = self.fastq['r1'], self.fastq['r2']
+        # Abandonment
         output_r1, output_r1_unp, output_r2, output_r2_unp = [
             self.compose_output_gz(filename, output_threads, compression_level)
             for filename in output_files
         ]
+        
+        output_r1, output_r1_unp, output_r2, output_r2_unp = output_files[0],output_files[1],output_files[2],output_files[3]
         
         cmd = (
                 f"trimmomatic {self.mod} -threads {trimmomatic_threads} "
@@ -158,7 +158,7 @@ def trim(args):
                     fastq_list = value.split(",")
                     soft = "zcat" if fastq_list[0][-2:] == 'gz' else 'cat'
                     fastqs = " ".join(fastq_list)
-                    cmd = f"{soft} {fastqs}|gzip > {tmp_fastq}/{wildcards[0]}_{key.upper()}.fastq.gz"
+                    cmd = f"{soft} {fastqs} |gzip > {tmp_fastq}/{wildcards[0]}_{key.upper()}.fastq.gz"
                     debug_subprocess_call(cmd)
                     fastq_dict.update({key:f'{tmp_fastq}/{wildcards[0]}_{key.upper()}.fastq.gz'})   
             mod = 'PE' if len(fastq) > 1 else 'SE'

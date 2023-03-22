@@ -16,15 +16,19 @@ class Map_reads():
     """
     bwa mapping
     """
-    def __init__(self,wildcards,threads,outdir,resource_dir,units):
+    def __init__(self,wildcards,threads,outdir,resource_dir,units,args):
         self.sample,self.unit = wildcards
         self.genome = f'{resource_dir}/genome.fasta'
         self.threads = threads
         self.outdir = Path(outdir)
         self.units = units
-
+        self.args = args
+        
         # input
-        self.trimmed_reads1,self.trimmed_reads2 = self.outdir/f"01.trimmed/{self.sample}-{self.unit}.1.fastq.gz",self.outdir/f"01.trimmed/{self.sample}-{self.unit}.2.fastq.gz"
+        if self.args.downsample:
+            self.trimmed_reads1,self.trimmed_reads2 = self.outdir/f"01.trimmed_ds/{self.sample}-{self.unit}.1.fastq.gz",self.outdir/f"01.trimmed_ds/{self.sample}-{self.unit}.2.fastq.gz"
+        else:
+            self.trimmed_reads1,self.trimmed_reads2 = self.outdir/f"01.trimmed/{self.sample}-{self.unit}.1.fastq.gz",self.outdir/f"01.trimmed/{self.sample}-{self.unit}.2.fastq.gz"
         # output
         mapped_dir = self.outdir/"02.mapped"
         mapped_dir.mkdir(parents=True,exist_ok=True)
@@ -33,8 +37,8 @@ class Map_reads():
         # log
         self.log_dir = self.outdir/"logs/mapped"
         self.log_dir.mkdir(parents=True,exist_ok=True)
-        
-        
+    
+    
     @add_log
     def map_reads(self):
         extra = get_read_group(self.units,self.sample,self.unit)
@@ -132,6 +136,8 @@ class Get_recal():
         _log = self.log_dir/f"MarkDuplicates-{self.sample}-{self.unit}.log"
         if self.args.remove_duplicates:
             extra = 'REMOVE_DUPLICATES=true'
+        else:
+            extra = ''
         cmd = (
                 "picard MarkDuplicates -Xmx8g "
                 f"{extra} "  # Tool and its subcommand
@@ -147,7 +153,6 @@ class Get_recal():
         _log = self.log_dir/f"BaseRecalibrator-{self.sample}-{self.unit}.log"
         
         bam = str(self.outdir/get_recal_input(self.sample,self.unit,self.args.remove_duplicates))
-        
         extra = get_regions_param(self.args.intervals,self.args.interval_padding)
         
         if self.known:
@@ -170,7 +175,6 @@ class Get_recal():
         """
         _log = self.log_dir/f"ApplyBQSR-{self.sample}-{self.unit}.log"
         bam = str(self.outdir/get_recal_input(self.sample,self.unit,self.args.remove_duplicates))
-        
         extra = get_regions_param(self.args.intervals,self.args.interval_padding)
         
         cmd = (
@@ -193,7 +197,7 @@ class Get_recal():
         
         output_samtools=f"{str(self.outdir)}/02.mapped/{name}_mapping.txt"
         cmd_samtools = (f"samtools stats {_bam} > {output_samtools}")
-        cmd_python = (f"python {str(CU_PATH.parents[1])}/mapping/collect_feature.py --bam {_bam} --outdir {str(self.outdir)}/02.mapped --refflat {self.refflat} --sample {name}")
+        cmd_python = (f"python {str(CU_PATH.parents[1])}/tools/collect_feature.py --bam {_bam} --outdir {str(self.outdir)}/02.mapped --refflat {self.refflat} --sample {name}")
         
         if not Path(f"{str(self.outdir)}/02.mapped/{name}_mapping.txt").exists():
             debug_subprocess_call(cmd_samtools)
@@ -332,21 +336,22 @@ def run(params):
     """
     """
     wildcards,threads,outdir,resource_dir,units,args = params
-    app_map = Map_reads(wildcards,threads,outdir,resource_dir,units)
+    app_map = Map_reads(wildcards,threads,outdir,resource_dir,units,args)
     app_map.map_reads()
     app_getrecal = Get_recal(wildcards,threads,outdir,resource_dir,args)
     app_getrecal.get_recal()
 
 
 @add_log
-def merge(outdir):
+def merge(outdir,downsample):
     # merge stat
     bam_list = get_bam_file(f"{outdir}/02.mapped") 
     dic = defaultdict(lambda:defaultdict(list))
     for bam in bam_list:
         name = str(bam).rsplit('/',1)[1].rsplit('.',2)[0]
         # raw reads and mapping read ratio
-        with pysam.FastxFile(f'{outdir}/01.trimmed/{name}.1.fastq.gz') as fq:
+        trim_dir = '01.trimmed_ds' if downsample else '01.trimmed'
+        with pysam.FastxFile(f'{outdir}/{trim_dir}/{name}.1.fastq') as fq:
             raw_reads = 0
             for _ in fq:
                 raw_reads += 1
@@ -394,6 +399,43 @@ def merge(outdir):
     merge_df.to_csv(f"{outdir}/02.mapped/merge.tsv",sep="\t")
 
 
+def downsample_bam(bam,outdir,sample_name,p):
+    """
+    downsample to the same level
+    """
+    print('run downsample bam')
+    Path(f'{outdir}/02.mapped_ds').mkdir(parents=True,exist_ok=True)
+    cmd_downsample = (f'picard DownsampleSam '
+                    f'I={bam} O={outdir}/02.mapped_ds/{sample_name}.bam '
+                    f'P={p} R=100 ACCURACY=0.00001 STRATEGY=ConstantMemory'
+                    )
+    cmd_sort = (f'samtools sort -@8 {outdir}/02.mapped_ds/{sample_name}.bam -o {outdir}/02.mapped_ds/{sample_name}.sorted.bam')
+    cmd_index = (f'samtools index {outdir}/02.mapped_ds/{sample_name}.sorted.bam')
+    debug_subprocess_call(cmd_downsample)
+    debug_subprocess_call(cmd_sort)
+    debug_subprocess_call(cmd_index)
+
+
+def run_downsample_bam(param):
+    bam,outdir,sample_name,p = param
+    downsample_bam(bam,outdir,sample_name,p)
+
+
+def downsample_fastq(fastq,outdir,fq_name,min_num):
+    """
+    downsample to the same level
+    """
+    print('run downsample fastq')
+    cmd = (f'seqtk sample -s100 {fastq} {min_num} | gzip > {outdir}/01.trimmed_ds/{fq_name}')
+    debug_subprocess_call(cmd)
+
+
+def run_downsample_fastq(param):
+    fastq,outdir,fq_name,min_num = param
+    downsample_fastq(fastq,outdir,fq_name,min_num)
+
+
+
 
 @add_log
 def map(args):
@@ -406,6 +448,22 @@ def map(args):
     units_file = f'{config_path}/units.tsv'
     units = get_units(units_file)
 
+    if args.downsample:
+        fq_num = []
+        for fastq in Path(f'{outdir}/01.trimmed').rglob("*[0-9].fastq.gz"):
+            fq_num.append(get_fq_reads_num(fastq))
+        min_num = min(fq_num)
+        Path(f'{outdir}/01.trimmed_ds').mkdir(parents=True,exist_ok=True)
+        p_list = []
+        for fastq in Path(f'{outdir}/01.trimmed').rglob("*[0-9].fastq.gz"):
+            fq_name = fastq.name
+            p_list.append((fastq,outdir,fq_name,min_num))
+        with multiprocessing.Pool(len(p_list)) as p:
+            p.map(run_downsample_fastq,p_list)
+        p.close()
+        p.join()
+
+
     param_list = []
     for wildcards in units.index: 
         param_list.append((wildcards,threads,outdir,resource_dir,units,args))
@@ -416,7 +474,7 @@ def map(args):
     p.join()
 
     # merge data
-    merge(str(outdir))
+    merge(str(outdir),args.downsample)
     
     # CNV
     #cnv_app = CNV(threads,outdir,resource_dir)
@@ -435,6 +493,7 @@ def get_opts_map(parser, sub_program=True):
     parser.add_argument('--intervals',help='One or more genomic intervals over which to operate.This argument may be specified 0 or more times.')
     parser.add_argument('--interval_padding',help='Amount of padding (in bp) to add to each interval you are including.',default=0,type=int)
     parser.add_argument('--rm_files',help='Remove redundant bam files after running.',action='store_true')
+    parser.add_argument('--downsample',help='Downsample the raw reads of all samples to a consistent level.',action='store_true')
     
     if sub_program:
         parser = s_common(parser)

@@ -2,12 +2,13 @@ import pysam
 import pandas as pd
 import numpy as np
 from pathlib import Path
-import subprocess
 import os
 import gzip
 import matplotlib.pyplot as plt
 import matplotlib
 import unittest
+from collections import Counter
+
 from dna_seq_analysis.tools.common import *
 
 matplotlib.use('Agg')
@@ -20,13 +21,21 @@ def get_only_child_dir(path):
     children = [child for child in path.iterdir() if child.is_dir()]
     assert (
         len(children) == 1
-    ), "Invalid VEP cache directory, only a single entry is allowed, make sure that cache was created with the snakemake VEP cache wrapper"
+    ), "Invalid VEP cache directory, only a single entry is allowed, make sure that cache was created with the ref module."
     return children[0]
 
 
 def fun(record):
     for _,value in record.samples.items():
         return value["GT"]
+
+
+def flatten(lst):
+    for item in lst:
+        if isinstance(item, list):
+            yield from flatten(item)
+        else:
+            yield item
 
 
 def repalce_html(html_file):
@@ -58,7 +67,7 @@ def repalce_html(html_file):
                 fp.write(line)
                 
     cmd_clean_html = (f"rm {html_file}")
-    subprocess.check_call(cmd_clean_html,shell=True)
+    debug_subprocess_call(cmd_clean_html)
 
 
 class Annotate():
@@ -117,7 +126,7 @@ class Annotate():
             f"bcftools view {self.calls} | "
             f"vep {extra} {fork} "       
             "--format vcf "
-            "--vcf --fields 'Allele,Consequence,SYMBOL,Gene,Feature_type,BIOTYPE,HGVSc,HGVSp,cDNA_position,CDS_position,Protein_position,Amino_acids,Codons' "
+            "--vcf --fields 'Allele,Consequence,SYMBOL,Gene,Feature,Feature_type,BIOTYPE,HGVSc,HGVSp,cDNA_position,CDS_position,Protein_position,Amino_acids,Codons' "
             f"{cache} "
             f"--dir_plugins {self.plugins} {load_plugins} "
             "--force_overwrite "
@@ -163,7 +172,7 @@ class Split_vcf():
         Path(outdir).mkdir(parents=True,exist_ok=True)
     
         cmd_split = (f'bcftools view -s {sample_name} {self.calls} -Oz -o {outdir}/{sample_name}_all.vcf.gz')
-        subprocess.check_call(cmd_split,shell=True)
+        debug_subprocess_call(cmd_split)
 
         with pysam.VariantFile(f"{outdir}/{sample_name}_all.vcf.gz") as vcf_in:
             with pysam.VariantFile(f"{outdir}/{sample_name}.vcf.gz",'w',header = vcf_in.header) as vcf_out:
@@ -174,7 +183,7 @@ class Split_vcf():
                         vcf_out.write(new_record)
         
         cmd_clean_vcf = (f'rm {outdir}/{sample_name}_all.vcf.gz')
-        subprocess.check_call(cmd_clean_vcf,shell=True)
+        debug_subprocess_call(cmd_clean_vcf)
 
         plugins = self.args.vep_plugins_param
         extra = self.args.vep_param if self.args.vep_param else ''
@@ -200,7 +209,7 @@ class Split_vcf():
                     f"bcftools view {outdir}/{sample_name}.vcf.gz | "
                     f"vep {extra} {fork} "       
                     "--format vcf "
-                    "--vcf --fields 'Allele,Consequence,SYMBOL,Gene,Feature_type,BIOTYPE,HGVSc,HGVSp,cDNA_position,CDS_position,Protein_position,Amino_acids,Codons' "
+                    "--vcf --fields 'Allele,Consequence,SYMBOL,Gene,Feature,Feature_type,BIOTYPE,HGVSc,HGVSp,cDNA_position,CDS_position,Protein_position,Amino_acids,Codons' "
                     f"{cache} "
                     f"--dir_plugins {self.plugins} {load_plugins} "
                     "--force_overwrite "
@@ -208,7 +217,7 @@ class Split_vcf():
                     f"--output_file STDOUT --stats_file {outdir}/{sample_name}.html | "
                     f"bcftools view -O{fmt} > {outdir}/{sample_name}_annotated.vcf.gz;"
                 )
-        subprocess.check_call(cmd_html,shell=True)
+        debug_subprocess_call(cmd_html)
         
         html_file = f'{outdir}/{sample_name}.html'
         repalce_html(html_file)
@@ -218,9 +227,35 @@ class Split_vcf():
                     f"rbt vcf-to-txt -g --fmt DP AD --info ANN | "
                     f"gzip > {outdir}/{sample_name}_calls.tsv.gz"
                     )
-        subprocess.check_call(cmd_line_vcf2tsv,shell=True)
-
-
+        debug_subprocess_call(cmd_line_vcf2tsv)
+        
+        # vcf2maf
+        cmd_gzip = (f'gzip -d {outdir}/{sample_name}_annotated.vcf.gz')
+        debug_subprocess_call(cmd_gzip)
+        ncbi_build = self.args.build 
+        cmd_vcf2maf = (f'vcf2maf.pl --input-vcf {outdir}/{sample_name}_annotated.vcf '
+                       f'--output-maf {outdir}/{sample_name}_vep.maf '
+                       f'--inhibit-vep --ref-fasta {self.genome} --ncbi-build {ncbi_build} '
+                       f'--tumor-id {sample_name}'
+                       )
+        debug_subprocess_call(cmd_vcf2maf)
+        
+        # summary
+        csq_type_all = []
+        with pysam.VariantFile(f'{outdir}/{sample_name}_annotated.vcf','r') as vf:
+            for record in vf:
+                info = record.info
+                csq = info['CSQ']
+                csq_list = [x for x in csq]
+                singel_all_type = [x.split("&") for x in [mix_x.split("|")[1] for mix_x in csq_list]]
+                flat_singel_all_type = list((flatten(singel_all_type)))
+                csq_type_all.extend(flat_singel_all_type)
+        csq_dict = Counter(csq_type_all)
+        df_csq = pd.DataFrame.from_dict(csq_dict,orient='index')
+        df_csq.columns = ['Consequence type']
+        df_csq.to_csv(f"{outdir}/{sample_name}_varitation_type.txt",sep="\t")
+             
+        
     def run_split_vcf(self):
         """
         split {sample}vcf.gz from all.vcf.gz 
@@ -234,6 +269,32 @@ class Split_vcf():
     @add_log
     def run(self):
         self.run_split_vcf()
+
+
+def merge_maf(outdir):
+    for sample in os.listdir(outdir):
+        break
+    cmd_extract_head = (f"grep 'Hugo_Symbol' {outdir}/{sample}/{sample}_vep.maf > {outdir}/tmp_head")
+    cmd_extract_body = (f"cat {outdir}/*/*maf | grep -v '^#'| grep -v '^Hugo_Symbol' > {outdir}/tmp_all")
+    cmd_merge = (f'cat {outdir}/tmp_head {outdir}/tmp_all > {outdir}/../08.annotated/vep_merge.maf')
+    debug_subprocess_call(cmd_extract_head)
+    debug_subprocess_call(cmd_extract_body)
+    debug_subprocess_call(cmd_merge)
+    Path(f'{outdir}/tmp_head').unlink()
+    Path(f'{outdir}/tmp_all').unlink()
+    
+
+def maftools(outdir,species):
+    cmd = (
+        f'Rscript {str(CU_PATH.parents[1])}/tools/maftools.R '
+        f'--outdir {outdir}/08.annotated '
+        f'--species  {species} '
+        f'--maf_file {outdir}/08.annotated/vep_merge.maf '
+    )
+    try:
+        debug_subprocess_call(cmd)
+    except subprocess.CalledProcessError as e:
+        print("Command failed with return code:", e.returncode)
 
 
 def plot_snv(split_dir):
@@ -295,11 +356,19 @@ def annotation(args):
     run_annotate.run()
     run_split =  Split_vcf(outdir,resource_dir,args)
     run_split.run()
+    merge_maf(f'{outdir}/11.split')
     plot_snv(f'{outdir}/11.split')
+    
+    if args.species in ['homo_sapiens','mus_musculus']:
+        maftools(outdir,args.species)
+    else:
+        print('Maftools is not running')
 
 
 def get_opts_annotation(parser, sub_program=True):
     parser.add_argument('--thread',help='Number of threads.', default=4,type=int)
+    parser.add_argument('--species',help="Ensembl species name.")
+    parser.add_argument('--build',help="Genome build.")
     parser.add_argument('--vep_param',help="Additional parameters for the called software. Need to be enclosed in quotation marks.\
 For example, `--{software}_param '--param1 value1 --param2 value2'`,`--vep_param '--sift b'`.")
     parser.add_argument('--vep_plugins_param',help="Add any plugin from https://www.ensembl.org/info/docs/tools/vep/script/vep_plugins.html.Use named plugin.\
