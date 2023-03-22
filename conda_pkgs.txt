@@ -12,4 +12,13 @@ bioconda::gatk4==4.2.0.0
 bioconda::fastqc==0.11.9
 bioconda::trimmomatic==0.36
 bioconda::ucsc-gtftogenepred
-bioconda::cnvkit
+conda-forge::pigz
+bioconda::vcf2maf
+bioconda::r-pheatmap
+conda-forge::r-stringr
+conda-forge::r-argparser
+bioconda::r-deconstructsigs
+bioconda::bioconductor-maftools
+bioconda::bioconductor-bsgenome
+bioconda::bioconductor-bsgenome.hsapiens.ncbi.grch38
+bioconda::bioconductor-bsgenome.mmusculus.ucsc.mm39

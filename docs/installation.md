@@ -16,5 +16,6 @@ mamba create -n wgs-process -y --file conda_pkgs.txt
 Make sure you have activated the wgs-process conda environment before running python setup.py.
 ```
 conda activate wgs-process
+pip install -r requirements.txt
 python setup.py
 ```
