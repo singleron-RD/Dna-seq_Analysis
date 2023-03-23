@@ -351,7 +351,7 @@ def merge(outdir,downsample):
         name = str(bam).rsplit('/',1)[1].rsplit('.',2)[0]
         # raw reads and mapping read ratio
         trim_dir = '01.trimmed_ds' if downsample else '01.trimmed'
-        with pysam.FastxFile(f'{outdir}/{trim_dir}/{name}.1.fastq') as fq:
+        with pysam.FastxFile(f'{outdir}/{trim_dir}/{name}.1.fastq.gz') as fq:
             raw_reads = 0
             for _ in fq:
                 raw_reads += 1
