@@ -205,6 +205,7 @@ class Get_recal():
 
         # coverage
         cmd_coverage = (f'/SGRNJ01/Public/Software/conda_env/pacbio_v1/bin/samtools coverage {str(self.mapped_bam)} > {str(self.outdir)}/02.mapped/{name}_frag.cov')
+        
         debug_subprocess_call(cmd_coverage)
 
         with open(f"{str(self.outdir)}/02.mapped/{name}_frag.cov") as cov:
@@ -468,7 +469,13 @@ def map(args):
     for wildcards in units.index: 
         param_list.append((wildcards,threads,outdir,resource_dir,units,args))
 
-    with multiprocessing.Pool(len(param_list)) as p:
+    # Limit the number of CPUs used
+    if len(param_list) > 20:
+        num_cpu = 20
+    else:
+        num_cpu = len(param_list)
+    
+    with multiprocessing.Pool(num_cpu) as p:
         r=list(tqdm(p.map(run,param_list),total=len(param_list),desc='Mapping reads '))
     p.close()
     p.join()

@@ -4,6 +4,7 @@ import numpy as np
 from pathlib import Path
 import os
 import gzip
+import multiprocessing
 import matplotlib.pyplot as plt
 import matplotlib
 import unittest
@@ -263,12 +264,20 @@ class Split_vcf():
         calls_file = f"{str(self.outdir)}/10.tables/calls.tsv.gz"
         calls_df = pd.read_table(calls_file, header=[0, 1])
         samples = [name for name in calls_df.columns.levels[0] if name != "VARIANT"]
+        
+        p_list = []
         for sample in samples:
-            self.split(sample)
+            p_list.append((sample))
+        with multiprocessing.Pool(len(p_list)) as p:
+            p.map(self.run,p_list)
+        p.close()
+        p.join()
+
 
     @add_log
-    def run(self):
-        self.run_split_vcf()
+    def run(self,param):
+        sample = param
+        self.split(sample)
 
 
 def merge_maf(outdir):
@@ -353,9 +362,9 @@ def annotation(args):
     resource_dir = config['genomedir']
     
     run_annotate = Annotate(outdir,resource_dir,args)
-    run_annotate.run()
+    run_annotate.run()    
     run_split =  Split_vcf(outdir,resource_dir,args)
-    run_split.run()
+    run_split.run_split_vcf()
     merge_maf(f'{outdir}/11.split')
     plot_snv(f'{outdir}/11.split')
     

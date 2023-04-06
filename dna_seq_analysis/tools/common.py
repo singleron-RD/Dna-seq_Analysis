@@ -6,6 +6,7 @@ from functools import wraps
 import yaml
 import pandas as pd
 from pathlib import Path
+import pysam
 import pathlib
 import os
 import importlib
@@ -178,3 +179,10 @@ def get_call_variants_params(contig,dirs,restrict_regions,restrict_padding):
 
 def get_vartype_arg(vartype):
     return "--select-type-to-include {}".format("SNP" if vartype == "snvs" else "INDEL")
+
+
+def get_fq_reads_num(fq):
+    with pysam.FastxFile(fq,'r') as fh:
+        for num,record in enumerate(fh,1):
+            pass
+    return num
