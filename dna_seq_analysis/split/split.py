@@ -4,8 +4,8 @@ from pathlib import Path
 import multiprocessing
 from tqdm import tqdm
 from collections import defaultdict
-from xopen import xopen
 import unittest
+from itertools import product,combinations
 
 from dna_seq_analysis.tools.common import *
 
@@ -23,6 +23,19 @@ def split_adapter(fa):
     return adapter_dict
 
 
+def get_mismatch_dict(index_list,bases = 'ATCG',n_mismatch=1):
+    mismatch_dict = {}
+    for index in index_list:   
+        for locs in combinations(range(len(index)), n_mismatch):
+            seq = [[base] for base in index]
+            for loc in locs:
+                seq[loc] = bases
+                for _ in product(*seq):
+                    mismatch_seq = ''.join(_)
+                    mismatch_dict.update({mismatch_seq:index})
+    return mismatch_dict
+
+
 def parse_mapfile(mapfile):
     """
     
@@ -32,9 +45,8 @@ def parse_mapfile(mapfile):
     return args_dict
 
 
-def hm_dis(s1, s2):
-    dis = sum(e1 != e2 for e1, e2 in zip(s1, s2))
-    return dis
+def get_key(d, value):
+    return next((k for k, v in d.items() if v == value), None)
 
 
 class Split_fastq():
@@ -56,28 +68,33 @@ class Split_fastq():
         
         
 
-    def split_fq(self,fq1,fq2,fq_outdir,sample,adapter_dict):
+    def split_fq(self,fq1,fq2,fq_outdir,sample,adapter_dict,all_mismatch_dict):
 
-        out_notinfq1 = xopen(f"{fq_outdir}/{sample}_not_R1.fastq",'w')
-        out_notinfq2 = xopen(f"{fq_outdir}/{sample}_not_R2.fastq",'w')
+        out_notinfq1 = open(f"{fq_outdir}/{sample}_not_R1.fastq",'w')
+        out_notinfq2 = open(f"{fq_outdir}/{sample}_not_R2.fastq",'w')
 
-        out_fq1_dict = {adapter:xopen(f"{fq_outdir}/{sample}_{adapter}_R1.fastq",'w') for adapter in adapter_dict}
-        out_fq2_dict = {adapter:xopen(f"{fq_outdir}/{sample}_{adapter}_R2.fastq",'w') for adapter in adapter_dict}
+        out_fq1_dict = {adapter:open(f"{fq_outdir}/{sample}_{adapter}_R1.fastq",'w') for adapter in adapter_dict}
+        out_fq2_dict = {adapter:open(f"{fq_outdir}/{sample}_{adapter}_R2.fastq",'w') for adapter in adapter_dict}
         
         with pysam.FastxFile(fq1) as fh1, pysam.FastxFile(fq2) as fh2:
             for record1,record2 in zip(fh1,fh2):
                 header1, seq1, qual1 = record1.name, record1.sequence, record1.quality
                 header2, seq2, qual2 = record2.name, record2.sequence, record2.quality
                 
-                adapter_distance = {adapter:hm_dis(seq2[:9],adapter_dict[adapter])  for adapter in adapter_dict}
-                match_adapter = [k for k,v in adapter_distance.items() if v<=1]
-
-                if len(match_adapter) == 0:
-                    out_notinfq1.write(f'@{header1}\n{seq1[9:]}\n+\n{qual1[9:]}\n')
-                    out_notinfq2.write(f'@{header2}\n{seq2[9:]}\n+\n{qual2[9:]}\n')    
+                # factor
+                match_bool = False
+                if seq2[:9] in all_mismatch_dict:
+                    adapter_seq = all_mismatch_dict[seq2[:9]]
+                    adapter_name = get_key(adapter_dict,adapter_seq)
+                    match_bool =True
+                
+                if match_bool:
+                    out_fq1_dict[adapter_name].write(f'@{header1}\n{seq1[9:]}\n+\n{qual1[9:]}\n')
+                    out_fq2_dict[adapter_name].write(f'@{header2}\n{seq2[9:]}\n+\n{qual2[9:]}\n')
                 else:
-                    out_fq1_dict[match_adapter[0]].write(f'@{header1}\n{seq1[9:]}\n+\n{qual1[9:]}\n')
-                    out_fq2_dict[match_adapter[0]].write(f'@{header2}\n{seq2[9:]}\n+\n{qual2[9:]}\n')
+                    out_notinfq1.write(f'@{header1}\n{seq1[9:]}\n+\n{qual1[9:]}\n')
+                    out_notinfq2.write(f'@{header2}\n{seq2[9:]}\n+\n{qual2[9:]}\n')
+
         out_notinfq1.close()
         out_notinfq2.close()
         for adapter in adapter_dict:
@@ -86,8 +103,8 @@ class Split_fastq():
 
 
     def run(self,params):
-        fq1,fq2,outdir_fq,sample_name,adapter_dict = params
-        self.split_fq(fq1,fq2,outdir_fq,sample_name,adapter_dict)
+        fq1,fq2,outdir_fq,sample_name,adapter_dict,all_mismatch_dict = params
+        self.split_fq(fq1,fq2,outdir_fq,sample_name,adapter_dict,all_mismatch_dict)
 
 
     def main(self):
@@ -115,20 +132,21 @@ class Split_fastq():
                 soft = "zcat" if fq1_list[0][-2:] == 'gz' else 'cat'
                 fastq1 = " ".join(fq1_list)
                 fastq2 = " ".join(fq2_list)
-                cmd_r1 = f"{soft} {fastq1} |gzip > {tmp_fastq}/{sample_name}_R1.fastq.gz"
-                cmd_r2 = f"{soft} {fastq2} |gzip > {tmp_fastq}/{sample_name}_R2.fastq.gz"
+                cmd_r1 = f"{soft} {fastq1} > {tmp_fastq}/{sample_name}_R1.fastq"
+                cmd_r2 = f"{soft} {fastq2} > {tmp_fastq}/{sample_name}_R2.fastq"
                 debug_subprocess_call(cmd_r1)
                 debug_subprocess_call(cmd_r2)
-                fq1 = f'{tmp_fastq}/{sample_name}_R1.fastq.gz'
-                fq2 = f'{tmp_fastq}/{sample_name}_R2.fastq.gz'
+                fq1 = f'{tmp_fastq}/{sample_name}_R1.fastq'
+                fq2 = f'{tmp_fastq}/{sample_name}_R2.fastq'
         
 
             adapter_dict = split_adapter(fa)
+            all_mismatch_dict = get_mismatch_dict(adapter_dict.values())
             
             for adapter in adapter_dict:
                 self.units_dict[f"{sample_name}_{adapter}"] = {"sample":f"{sample_name}_{adapter}","unit":1,"platform":'ILLUMINA','fq1':f"{outdir_fq}/{sample_name}_{adapter}_R1.fastq",'fq2':f"{outdir_fq}/{sample_name}_{adapter}_R2.fastq"}
             
-            param_list.append((fq1,fq2,outdir_fq,sample_name,adapter_dict))
+            param_list.append((fq1,fq2,outdir_fq,sample_name,adapter_dict,all_mismatch_dict))
         
         if self.thread > len(param_list):
             num_pool = len(param_list)

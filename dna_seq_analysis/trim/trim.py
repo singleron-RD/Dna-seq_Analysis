@@ -158,13 +158,13 @@ def trim(args):
                     fastq_list = value.split(",")
                     soft = "zcat" if fastq_list[0][-2:] == 'gz' else 'cat'
                     fastqs = " ".join(fastq_list)
-                    cmd = f"{soft} {fastqs} |gzip > {tmp_fastq}/{wildcards[0]}_{key.upper()}.fastq.gz"
+                    cmd = f"{soft} {fastqs} > {tmp_fastq}/{wildcards[0]}_{key.upper()}.fastq"
                     debug_subprocess_call(cmd)
-                    fastq_dict.update({key:f'{tmp_fastq}/{wildcards[0]}_{key.upper()}.fastq.gz'})   
+                    fastq_dict.update({key:f'{tmp_fastq}/{wildcards[0]}_{key.upper()}.fastq'})
             mod = 'PE' if len(fastq) > 1 else 'SE'
             TRIM_DICT[mod.swapcase()].update(extra_param_dict)
             trimmer = " ".join([key+':'+value for key,value in TRIM_DICT[mod.swapcase()].items()])
-            param_list.append((fastq_dict,outdir,wildcards,trimmer,mod,thread))   
+            param_list.append((fastq_dict,outdir,wildcards,trimmer,mod,thread)) 
         else:
             mod = 'PE' if len(fastq) > 1 else 'SE'
             TRIM_DICT[mod.swapcase()].update(extra_param_dict)
