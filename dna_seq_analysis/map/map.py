@@ -8,6 +8,7 @@ from tqdm import tqdm
 from collections import defaultdict
 from pathlib import Path
 import unittest
+import subprocess
 
 from dna_seq_analysis.tools.common import *
 
@@ -352,12 +353,11 @@ def merge(outdir,downsample):
         name = str(bam).rsplit('/',1)[1].rsplit('.',2)[0]
         # raw reads and mapping read ratio
         trim_dir = '01.trimmed_ds' if downsample else '01.trimmed'
-        with pysam.FastxFile(f'{outdir}/{trim_dir}/{name}.1.fastq.gz') as fq:
-            raw_reads = 0
-            for _ in fq:
-                raw_reads += 1
-            raw_reads = raw_reads*2
-            dic[name]["Raw Reads"] = raw_reads
+        cmd_reads_num = (f'zcat {outdir}/{trim_dir}/{name}.1.fastq.gz|wc -l')
+        result = subprocess.run(cmd_reads_num,shell=True,stdout=subprocess.PIPE)
+        _ = int(result.stdout.decode().split()[0])
+        raw_reads = int(_/4)*2
+        dic[name]["Raw Reads"] = raw_reads
         with open(f"{outdir}/02.mapped/{name}_mapping.txt") as mapping:
             i = 0
             for line in mapping.readlines():
@@ -452,7 +452,11 @@ def map(args):
     if args.downsample:
         fq_num = []
         for fastq in Path(f'{outdir}/01.trimmed').rglob("*[0-9].fastq.gz"):
-            fq_num.append(get_fq_reads_num(fastq))
+            cmd_reads_num = (f'zcat {fastq}|wc -l')
+            result = subprocess.run(cmd_reads_num,shell=True,stdout=subprocess.PIPE)
+            _ = int(result.stdout.decode().split()[0])
+            nums = int(_/4)
+            fq_num.append(nums)
         min_num = min(fq_num)
         Path(f'{outdir}/01.trimmed_ds').mkdir(parents=True,exist_ok=True)
         p_list = []
