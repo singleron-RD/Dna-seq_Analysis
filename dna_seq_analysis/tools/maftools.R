@@ -17,7 +17,19 @@ maf_file <- argv$maf_file
 
 vep.laml = read.maf(maf = maf_file)
 
-png(paste0(outdir,'/','plotmafSummary_vep.png'),res = 150,width = 1080,height = 1500)
+laml = vep.laml
+laml@data=laml@data[!grepl('^MT-',laml@data$Hugo_Symbol),]
+laml@data$t_vaf = (laml@data$t_alt_count/laml@data$t_depth)
+mut = laml@data[laml@data$t_alt_count >= 5 &
+                  laml@data$t_vaf >= 0.05, c("Hugo_Symbol",
+                                             "Chromosome",
+                                             "Start_Position",
+                                             "Tumor_Sample_Barcode",
+                                             "t_vaf")]
+mut = as.data.frame(mut)
+write.csv(mut,file = paste0(outdir,'/08.annotated/mut_gene.txt'))
+
+png(paste0(outdir,'/08.annotated/plotmafSummary_vep.png'),res = 150,width = 1080,height = 1500)
 plotmafSummary(maf = vep.laml,
                  rmOutlier = TRUE,
                  showBarcodes = T,
@@ -55,7 +67,7 @@ sigs.input <- mut.to.sigs.input(mut.ref = sample.mut.ref,
 
 df = data.frame()
 for (i in rownames(sigs.input)){
-    png(paste0(outdir,'/',sample,'_plotSignature.png'))
+    png(paste0(outdir,'/11.split/',i,'/plotSignature.png'),res = 150,width=1080,height=800)
     sigs.output <- whichSignatures(tumor.ref = sigs.input,
                                 signatures.ref = signatures.cosmic, 
                                 sample.id = i,
@@ -66,6 +78,4 @@ for (i in rownames(sigs.input)){
 }
 
 df = df[ , apply(df, 2, function(x){sum(x>0)})>0]
-png(paste0(outdir,'/',sample,'_plotSignature_heapmap.png'))
-pheatmap::pheatmap(df,cluster_cols = F,cluster_rows = F,fontsize = 20)
-dev.off()
+pheatmap::pheatmap(df,cluster_cols = F,cluster_rows = F,fontsize = 20,filename=paste0(outdir,'/08.annotated/PlotSignature_heapmap.png'))

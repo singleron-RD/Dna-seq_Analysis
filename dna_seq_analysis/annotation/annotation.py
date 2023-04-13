@@ -3,12 +3,13 @@ import pandas as pd
 import numpy as np
 from pathlib import Path
 import os
-import gzip
 import multiprocessing
 import matplotlib.pyplot as plt
 import matplotlib
 import unittest
 from collections import Counter
+import gseapy
+from gseapy import barplot, dotplot
 
 from dna_seq_analysis.tools.common import *
 
@@ -162,6 +163,7 @@ class Split_vcf():
         self.outdir = Path(outdir)
         self.args = args
         self.threads = args.thread
+        self.species = args.species
         # input 
         self.plugins = f"{resource_dir}/vep/plugins"
         self.cache = f"{resource_dir}/vep/cache"
@@ -255,7 +257,7 @@ class Split_vcf():
         df_csq = pd.DataFrame.from_dict(csq_dict,orient='index')
         df_csq.columns = ['Consequence type']
         df_csq.to_csv(f"{outdir}/{sample_name}_varitation_type.txt",sep="\t")
-             
+        
         
     def run_split_vcf(self):
         """
@@ -296,7 +298,7 @@ def merge_maf(outdir):
 def maftools(outdir,species):
     cmd = (
         f'Rscript {str(CU_PATH.parents[1])}/tools/maftools.R '
-        f'--outdir {outdir}/08.annotated '
+        f'--outdir {outdir} '
         f'--species  {species} '
         f'--maf_file {outdir}/08.annotated/vep_merge.maf '
     )
@@ -306,18 +308,78 @@ def maftools(outdir,species):
         print("Command failed with return code:", e.returncode)
 
 
+def go_kegg(outdir,species):
+    if species == 'homo_sapiens':
+        organism = 'Human'
+        kegg_sets=['KEGG_2019_Human','KEGG_2021_Human']
+        go_sets = ['GO_Biological_Process_2021','GO_Cellular_Component_2021','GO_Molecular_Function_2021'] 
+        en_dict = {'GO':go_sets,'KEGG':kegg_sets}
+    elif species == 'mus_musculus':
+        organism = 'mouse'
+        kegg_sets=['KEGG_2019_Mouse']
+        go_sets = ['GO_Biological_Process_2021','GO_Cellular_Component_2021','GO_Molecular_Function_2021']
+        en_dict = {'GO':go_sets,'KEGG':kegg_sets}
+    
+    df = pd.read_csv(f"{outdir}/08.annotated/mut_gene.txt",sep=",",header=0)
+    sample_list = list(set(df['Tumor_Sample_Barcode']))
+    for sample in sample_list:
+        df_sub = df.query("Tumor_Sample_Barcode == @sample")
+        gene_list = df_sub['Hugo_Symbol'].to_list()
+        for enrichr_sampel in en_dict:
+            enr = gseapy.enrichr(gene_list=gene_list,
+                    gene_sets=en_dict[enrichr_sampel],
+                    organism=organism,
+                    outdir=f'{outdir}/11.split/{sample}',
+                    cutoff=0.5
+                    )
+            # categorical scatterplot
+            ax = dotplot(enr.results,
+                        column="Adjusted P-value",
+                        x='Gene_set',
+                        size=10,
+                        top_term=5,
+                        figsize=(3,5),
+                        title = "GO",
+                        xticklabels_rot=45, 
+                        show_ring=True,
+                        marker='o',
+                        cutoff=0.5,
+                        ofname=f'{outdir}/11.split/{sample}/{sample}_{enrichr_sampel}_enrichr.pdf'
+                        )      
+            color_list=['darkred', 'darkblue','darkOrange']
+            ax = barplot(enr.results,
+                    column="Adjusted P-value",
+                    group='Gene_set',
+                    size=10,
+                    top_term=5,
+                    figsize=(3,5),
+                    color=color_list, 
+                    cutoff=0.5,
+                    ofname=f'{outdir}/11.split/{sample}/{sample}_{enrichr_sampel}_enrichr.pdf'
+                    )
+
+
+def var_type(x):
+    if x[0] > x[1]:
+        return 'deletion'
+    elif (x[0] == x[1])&(x[0]==1):
+        return 'SNV'
+    elif (x[0] == x[1])&(x[0]!=1):
+        return 'other'
+    elif x[0] < x[1]:
+        return 'insertion'
+
+
 def plot_snv(split_dir):
     snv_dict = {}
     for sample in os.listdir(split_dir):
-        vcf_file = f'{split_dir}/{sample}/{sample}.vcf.gz'
-        i = 0
-        with gzip.open(vcf_file,'rb') as fh:
-            for line in fh.readlines():
-                s = line.decode()
-                if s.startswith("#"):
-                    continue
-                else:
-                    i += 1
+        cmd = (f"zcat {split_dir}/{sample}/{sample}.vcf.gz|grep -v '#'|cut -f 4,5 > {split_dir}/{sample}/{sample}.txt")
+        debug_subprocess_call(cmd)
+        df_sample = pd.read_csv(f"{split_dir}/{sample}/{sample}.txt",sep="\t",header=None)
+        df_sample['len_tuble'] = df_sample.apply(lambda x: (len(x[0]),len(x[1])),axis=1)
+        df_sample['var_type'] = df_sample['len_tuble'].apply(var_type)
+        i = df_sample.var_type.value_counts().get('SNV',0)
+        Path(f"{split_dir}/{sample}/{sample}.txt").unlink()
         snv_dict.update({sample:i})
     df = (
             pd.DataFrame.from_dict(snv_dict,orient='index')
@@ -325,8 +387,6 @@ def plot_snv(split_dir):
             .reset_index()
         )
     df.columns = ['sample','total snvs']
-    fig,ax = plt.subplots(figsize=(16,14))
-    ax.bar(df['sample'],df['total snvs'],color='#0165fc',zorder=10)
     y_max = df['total snvs'].max()
     fig,ax = plt.subplots(figsize=(16,14))
     ax.bar(df['sample'],df['total snvs'],color='#0165fc',zorder=10)
@@ -367,11 +427,11 @@ def annotation(args):
     run_split.run_split_vcf()
     merge_maf(f'{outdir}/11.split')
     plot_snv(f'{outdir}/11.split')
-    
     if args.species in ['homo_sapiens','mus_musculus']:
         maftools(outdir,args.species)
+        go_kegg(outdir,args.species)
     else:
-        print('Maftools is not running')
+        print('Maftools and GO step is not running')
 
 
 def get_opts_annotation(parser, sub_program=True):

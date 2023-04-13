@@ -82,18 +82,19 @@ class Split_fastq():
                 header2, seq2, qual2 = record2.name, record2.sequence, record2.quality
                 
                 # factor
+                num_index = len(list(adapter_dict.values())[0])
                 match_bool = False
-                if seq2[:9] in all_mismatch_dict:
-                    adapter_seq = all_mismatch_dict[seq2[:9]]
+                if seq2[:num_index] in all_mismatch_dict:
+                    adapter_seq = all_mismatch_dict[seq2[:num_index]]
                     adapter_name = get_key(adapter_dict,adapter_seq)
                     match_bool =True
                 
                 if match_bool:
-                    out_fq1_dict[adapter_name].write(f'@{header1}\n{seq1[9:]}\n+\n{qual1[9:]}\n')
-                    out_fq2_dict[adapter_name].write(f'@{header2}\n{seq2[9:]}\n+\n{qual2[9:]}\n')
+                    out_fq1_dict[adapter_name].write(f'@{header1}\n{seq1[num_index:]}\n+\n{qual1[num_index:]}\n')
+                    out_fq2_dict[adapter_name].write(f'@{header2}\n{seq2[num_index:]}\n+\n{qual2[num_index:]}\n')
                 else:
-                    out_notinfq1.write(f'@{header1}\n{seq1[9:]}\n+\n{qual1[9:]}\n')
-                    out_notinfq2.write(f'@{header2}\n{seq2[9:]}\n+\n{qual2[9:]}\n')
+                    out_notinfq1.write(f'@{header1}\n{seq1[num_index:]}\n+\n{qual1[num_index:]}\n')
+                    out_notinfq2.write(f'@{header2}\n{seq2[num_index:]}\n+\n{qual2[num_index:]}\n')
 
         out_notinfq1.close()
         out_notinfq2.close()

@@ -178,4 +178,4 @@ def get_call_variants_params(contig,dirs,restrict_regions,restrict_padding):
 
 
 def get_vartype_arg(vartype):
-    return "--select-type-to-include {}".format("SNP" if vartype == "snvs" else "INDEL")
+    return "--select-type-to-include {}".format("SNP" if vartype == "snps" else "INDEL")
