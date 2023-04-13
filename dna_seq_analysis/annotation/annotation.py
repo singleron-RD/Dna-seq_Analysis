@@ -330,7 +330,7 @@ def go_kegg(outdir,species):
                     gene_sets=en_dict[enrichr_sampel],
                     organism=organism,
                     outdir=f'{outdir}/11.split/{sample}',
-                    cutoff=0.5
+                    cutoff=0.05
                     )
             # categorical scatterplot
             ax = dotplot(enr.results,
@@ -343,7 +343,7 @@ def go_kegg(outdir,species):
                         xticklabels_rot=45, 
                         show_ring=True,
                         marker='o',
-                        cutoff=0.5,
+                        cutoff=0.05,
                         ofname=f'{outdir}/11.split/{sample}/{sample}_{enrichr_sampel}_enrichr.pdf'
                         )      
             color_list=['darkred', 'darkblue','darkOrange']
@@ -429,7 +429,10 @@ def annotation(args):
     plot_snv(f'{outdir}/11.split')
     if args.species in ['homo_sapiens','mus_musculus']:
         maftools(outdir,args.species)
-        go_kegg(outdir,args.species)
+        try:
+            go_kegg(outdir,args.species)
+        except ValueError:
+            print("Warning: No enrich terms when cutoff = 0.05")
     else:
         print('Maftools and GO step is not running')
 
