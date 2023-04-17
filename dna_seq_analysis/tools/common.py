@@ -179,3 +179,12 @@ def get_call_variants_params(contig,dirs,restrict_regions,restrict_padding):
 
 def get_vartype_arg(vartype):
     return "--select-type-to-include {}".format("SNP" if vartype == "snps" else "INDEL")
+
+
+def get_fq_reads_num(fq):
+    soft = 'zcat' if fq.endswith('gz') else 'cat'
+    cmd = (f'{soft} {fq}|wc -l')
+    result = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE)
+    _ = int(result.stdout.decode().split()[0])
+    num = int(_/4)
+    return num

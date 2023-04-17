@@ -27,7 +27,7 @@ class Map_reads():
         
         # input
         if self.args.downsample:
-            self.trimmed_reads1,self.trimmed_reads2 = self.outdir/f"01.trimmed_ds/{self.sample}-{self.unit}.1.fastq.gz",self.outdir/f"01.trimmed_ds/{self.sample}-{self.unit}.2.fastq.gz"
+            self.trimmed_reads1,self.trimmed_reads2 = self.outdir/f"01.trimmed_ds/{self.sample}-{self.unit}.1.fastq",self.outdir/f"01.trimmed_ds/{self.sample}-{self.unit}.2.fastq"
         else:
             self.trimmed_reads1,self.trimmed_reads2 = self.outdir/f"01.trimmed/{self.sample}-{self.unit}.1.fastq.gz",self.outdir/f"01.trimmed/{self.sample}-{self.unit}.2.fastq.gz"
         # output
@@ -427,7 +427,7 @@ def downsample_fastq(fastq,outdir,fq_name,min_num):
     downsample to the same level
     """
     print('run downsample fastq')
-    cmd = (f'seqtk sample -s100 {fastq} {min_num} | gzip > {outdir}/01.trimmed_ds/{fq_name}')
+    cmd = (f'seqtk sample -s100 {fastq} {min_num} > {outdir}/01.trimmed_ds/{fq_name}')
     debug_subprocess_call(cmd)
 
 
@@ -450,18 +450,16 @@ def map(args):
     units = get_units(units_file)
 
     if args.downsample:
-        fq_num = []
+        fq_list = []
         for fastq in Path(f'{outdir}/01.trimmed').rglob("*[0-9].fastq.gz"):
-            cmd_reads_num = (f'zcat {fastq}|wc -l')
-            result = subprocess.run(cmd_reads_num,shell=True,stdout=subprocess.PIPE)
-            _ = int(result.stdout.decode().split()[0])
-            nums = int(_/4)
-            fq_num.append(nums)
+            fq_list.append(str(fastq))
+        with multiprocessing.Pool() as p:
+            fq_num = p.map(get_fq_reads_num,fq_list)
         min_num = min(fq_num)
         Path(f'{outdir}/01.trimmed_ds').mkdir(parents=True,exist_ok=True)
         p_list = []
         for fastq in Path(f'{outdir}/01.trimmed').rglob("*[0-9].fastq.gz"):
-            fq_name = fastq.name
+            fq_name = fastq.name.rsplit(".",1)[0]
             p_list.append((fastq,outdir,fq_name,min_num))
         with multiprocessing.Pool(len(p_list)) as p:
             p.map(run_downsample_fastq,p_list)
