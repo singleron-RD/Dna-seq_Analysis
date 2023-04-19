@@ -171,14 +171,14 @@ def call(args):
     called_dir = Path(outdir)/"05.called"
     called_dir.mkdir(parents=True,exist_ok=True)
     bed =  Path(outdir)/"05.called/regions.bed"
+    # bioawk -c fastx '{ print $name ":1-" length($seq) }
     cmd_bed = (
                 "bioawk -c fastx '{ print $name }' "
                 f"{resource_dir}/genome.fasta > {bed};"
                 f"sed -i '/^[KGJ]/d' {bed}"
             )
     debug_subprocess_call(cmd_bed)
-    # bioawk -c fastx '{ print $name ":1-" length($seq) }
-
+    
     units_file = f'{config_path}/units.tsv'
     units = get_units(units_file)
     
@@ -195,7 +195,7 @@ def call(args):
         for chro in chr_list: 
             call_param_list.append((wildcards,outdir,chro,resource_dir,units,args))
     with multiprocessing.Pool(threads) as p:
-        r=list(tqdm(p.map(run_call,call_param_list),total=len(call_param_list),desc='Calling '))
+        list(tqdm(p.map(run_call,call_param_list),total=len(call_param_list),desc='Calling '))
     p.close()
     p.join()
 
@@ -204,7 +204,7 @@ def call(args):
     for chro in chr_list: 
         combine_param_list.append((outdir,chro,resource_dir,units))
     with multiprocessing.Pool(threads) as p:
-        r=list(tqdm(p.map(run_comine,combine_param_list),total=len(combine_param_list),desc='Calling '))
+        list(tqdm(p.map(run_comine,combine_param_list),total=len(combine_param_list),desc='Calling '))
     p.close()
     p.join()
     

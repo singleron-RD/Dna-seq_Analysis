@@ -6,7 +6,6 @@ from functools import wraps
 import yaml
 import pandas as pd
 from pathlib import Path
-import pysam
 import pathlib
 import os
 import importlib
@@ -182,7 +181,7 @@ def get_vartype_arg(vartype):
 
 
 def get_fq_reads_num(fq):
-    soft = 'zcat' if fq.endswith('gz') else 'cat'
+    soft = 'zcat' if str(fq).endswith('gz') else 'cat'
     cmd = (f'{soft} {fq}|wc -l')
     result = subprocess.run(cmd,shell=True,stdout=subprocess.PIPE)
     _ = int(result.stdout.decode().split()[0])

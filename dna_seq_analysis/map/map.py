@@ -1,14 +1,11 @@
 import os
 import multiprocessing
-import pysam
 import numpy as np 
 import matplotlib.pyplot as plt
-import seaborn as sns
 from tqdm import tqdm
 from collections import defaultdict
 from pathlib import Path
 import unittest
-import subprocess
 
 from dna_seq_analysis.tools.common import *
 
@@ -85,7 +82,7 @@ class Map_reads():
             f" {extra}"
             f" {self.genome}"
             f" {self.trimmed_reads1} {self.trimmed_reads2}"
-            " | " + pipe_cmd + f")"
+            " | " + pipe_cmd + ")"
         )
         if not Path(self.outdir/f"02.mapped/{self.sample}-{self.unit}.sorted.bam").exists():
             debug_subprocess_call(cmd)
@@ -352,11 +349,9 @@ def merge(outdir,downsample):
     for bam in bam_list:
         name = str(bam).rsplit('/',1)[1].rsplit('.',2)[0]
         # raw reads and mapping read ratio
-        trim_dir = '01.trimmed_ds' if downsample else '01.trimmed'
-        cmd_reads_num = (f'zcat {outdir}/{trim_dir}/{name}.1.fastq.gz|wc -l')
-        result = subprocess.run(cmd_reads_num,shell=True,stdout=subprocess.PIPE)
-        _ = int(result.stdout.decode().split()[0])
-        raw_reads = int(_/4)*2
+        fq = f'{outdir}/01.trimmed_ds/{name}.1.fastq' if downsample else f'{outdir}/01.trimmed/{name}.1.fastq.gz'
+        _ = get_fq_reads_num(fq)
+        raw_reads = _*2
         dic[name]["Raw Reads"] = raw_reads
         with open(f"{outdir}/02.mapped/{name}_mapping.txt") as mapping:
             i = 0
@@ -427,7 +422,9 @@ def downsample_fastq(fastq,outdir,fq_name,min_num):
     downsample to the same level
     """
     print('run downsample fastq')
-    cmd = (f'seqtk sample -s100 {fastq} {min_num} > {outdir}/01.trimmed_ds/{fq_name}')
+    soft = 'zcat' if str(fastq).endswith('gz') else 'cat'
+    lines_num = min_num*4
+    cmd = (f'{soft} {fastq}|head -n {lines_num} > {outdir}/01.trimmed_ds/{fq_name}')
     debug_subprocess_call(cmd)
 
 
@@ -464,7 +461,7 @@ def map(args):
         with multiprocessing.Pool(len(p_list)) as p:
             p.map(run_downsample_fastq,p_list)
         p.close()
-        p.join()
+        p.join() 
 
 
     param_list = []
@@ -478,7 +475,7 @@ def map(args):
         num_cpu = len(param_list)
     
     with multiprocessing.Pool(num_cpu) as p:
-        r=list(tqdm(p.map(run,param_list),total=len(param_list),desc='Mapping reads '))
+        list(tqdm(p.map(run,param_list),total=len(param_list),desc='Mapping reads '))
     p.close()
     p.join()
 

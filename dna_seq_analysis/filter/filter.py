@@ -34,7 +34,7 @@ class Filtering():
         
         if self.args.filtertype == 'recalibrated':
             if not self.args.species == 'homo_sapiens':
-                raise ValueError(f"Only humans can choose `--filtertype recalibrated`,please change `--filtertype` parameter to hardfiltered.")     
+                raise ValueError("Only humans can choose `--filtertype recalibrated`,please change `--filtertype` parameter to hardfiltered.")     
         
 
     def select_calls(self):
@@ -179,10 +179,10 @@ class Filtering():
     def merge_calls(self):
         """
         """
-        _log = self.log_dir/f"MergeVcfs.log"
+        _log = self.log_dir/"MergeVcfs.log"
         filtertype = self.args.filtertype
         inputs = " ".join(f"INPUT={str(self.outdir)}/07.filtered/all.{vartype}.{filtertype}.vcf.gz" for vartype in ['snps','indels'])
-
+      
         cmd = (
             "picard MergeVcfs -Xmx8g "
             f"{inputs} "
@@ -197,7 +197,8 @@ class Filtering():
             self.hard_filter_calls()
             self.merge_calls()
         else:
-            self.recalibrate_calls()   
+            self.recalibrate_calls()      
+            
 
 
 @add_log
@@ -214,7 +215,8 @@ def filter(args):
 def get_opts_filter(parser, sub_program=True):
     parser.add_argument('--filtertype',help='Types of filter.',choices=["recalibrated","hardfiltered"],default='hardfiltered')
     parser.add_argument('--species',help="Ensembl species name.")
-    parser.add_argument('--gatk_bundle_dir',help="GATK bundle dir path.") 
+    parser.add_argument('--gatk_bundle_dir',help="GATK bundle dir path.")
+    
     
     if sub_program:
         parser = s_common(parser)
