@@ -6,3 +6,4 @@ seaborn==0.12.1
 pyyaml==6.0
 xopen==1.7.0
 tqdm==4.64.1
+gseapy==1.0.4

@@ -1,4 +1,5 @@
 conda-forge::python=3.11
+conda-forge::r-base=4.1.3
 bioconda::bcftools==1.16
 bioconda::ensembl-vep==108
 bioconda::seqtk==1.3
@@ -14,11 +15,11 @@ bioconda::trimmomatic==0.36
 bioconda::ucsc-gtftogenepred
 conda-forge::pigz
 bioconda::vcf2maf
-bioconda::r-pheatmap
-conda-forge::r-stringr
-conda-forge::r-argparser
-bioconda::r-deconstructsigs
+conda-forge::r-pheatmap==1.0.12
+conda-forge::r-stringr==1.5.0
+conda-forge::r-argparser==0.7.1
+bioconda::r-deconstructsigs==1.9.0
 bioconda::bioconductor-maftools
-bioconda::bioconductor-bsgenome
-bioconda::bioconductor-bsgenome.hsapiens.ncbi.grch38
-bioconda::bioconductor-bsgenome.mmusculus.ucsc.mm39
+bioconda::bioconductor-bsgenome==1.62.0
+bioconda::bioconductor-bsgenome.hsapiens.ncbi.grch38==1.3.1000
+bioconda::bioconductor-bsgenome.mmusculus.ucsc.mm39==1.4.3
