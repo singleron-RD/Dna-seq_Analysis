@@ -17,5 +17,5 @@ Make sure you have activated the wgs-process conda environment before running py
 ```
 conda activate wgs-process
 pip install -r requirements.txt
-python setup.py
+python setup.py develop
 ```
