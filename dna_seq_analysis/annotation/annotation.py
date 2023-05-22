@@ -326,37 +326,40 @@ def go_kegg(outdir,species):
         df_sub = df.query("Tumor_Sample_Barcode == @sample")
         gene_list = df_sub['Hugo_Symbol'].to_list()
         for enrichr_sampel in en_dict:
-            enr = gseapy.enrichr(gene_list=gene_list,
-                    gene_sets=en_dict[enrichr_sampel],
-                    organism=organism,
-                    outdir=f'{outdir}/11.split/{sample}',
-                    cutoff=0.05
-                    )
-            # categorical scatterplot
-            ax = dotplot(enr.results,
+            try:
+                enr = gseapy.enrichr(gene_list=gene_list,
+                        gene_sets=en_dict[enrichr_sampel],
+                        organism=organism,
+                        outdir=f'{outdir}/11.split/{sample}',
+                        cutoff=0.5
+                        )
+                # categorical scatterplot
+                ax = dotplot(enr.results,
+                            column="Adjusted P-value",
+                            x='Gene_set',
+                            size=10,
+                            top_term=5,
+                            figsize=(3,5),
+                            title = "GO",
+                            xticklabels_rot=45, 
+                            show_ring=True,
+                            marker='o',
+                            cutoff=0.05,
+                            ofname=f'{outdir}/11.split/{sample}/{sample}_{enrichr_sampel}_enrichr.pdf'
+                            )      
+                color_list=['darkred', 'darkblue','darkOrange']
+                ax = barplot(enr.results,
                         column="Adjusted P-value",
-                        x='Gene_set',
+                        group='Gene_set',
                         size=10,
                         top_term=5,
                         figsize=(3,5),
-                        title = "GO",
-                        xticklabels_rot=45, 
-                        show_ring=True,
-                        marker='o',
+                        color=color_list, 
                         cutoff=0.05,
                         ofname=f'{outdir}/11.split/{sample}/{sample}_{enrichr_sampel}_enrichr.pdf'
-                        )      
-            color_list=['darkred', 'darkblue','darkOrange']
-            ax = barplot(enr.results,
-                    column="Adjusted P-value",
-                    group='Gene_set',
-                    size=10,
-                    top_term=5,
-                    figsize=(3,5),
-                    color=color_list, 
-                    cutoff=0.5,
-                    ofname=f'{outdir}/11.split/{sample}/{sample}_{enrichr_sampel}_enrichr.pdf'
-                    )
+                        )
+            except ValueError:
+                print(f'Warning: No enrich terms when cutoff = 0.05. of {sample}')
 
 
 def var_type(x):
@@ -429,10 +432,7 @@ def annotation(args):
     plot_snv(f'{outdir}/11.split')
     if args.species in ['homo_sapiens','mus_musculus']:
         maftools(outdir,args.species)
-        try:
-            go_kegg(outdir,args.species)
-        except ValueError:
-            print("Warning: No enrich terms when cutoff = 0.05")
+        go_kegg(outdir,args.species)
     else:
         print('Maftools and GO step is not running')
 

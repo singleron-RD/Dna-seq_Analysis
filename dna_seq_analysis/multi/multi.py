@@ -271,7 +271,8 @@ job_end
                 fh.write(self.sjm_cmd + '\n')
                 fh.write(self.sjm_order)
         if self.args.mod == 'shell':
-            text_head = ("#!/usr/bin/env bash\n"
+            text_head = (f'source activate {self.__CONDA__}\n'
+                #"#!/usr/bin/env bash\n"
                 #"set -euxo pipefail\n"
                 )
             os.system(f'mkdir -p {self.args.outdir}/shell/')
