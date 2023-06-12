@@ -120,6 +120,7 @@ class Filtering():
                           f"{tranches} "
                           f"--recal-file {str(self.outdir)}/07.filtered/all.{vartype}.{filtertype}.vcf.gz "
                           f"--truth-sensitivity-filter-level 99.0 "
+                          "--max-gaussians 4 "
                           f"-mode {mode} "
                           f"-O {str(self.outdir)}/07.filtered/all.{vartype}.VQSR.vcf.gz")
         
@@ -140,6 +141,7 @@ class Filtering():
                         f"-R {REF} "
                         f"-V {str(self.outdir)}/07.filtered/all.snps.VQSR.vcf.gz "
                         f"-mode {mode} "
+                        "--max-gaussians 4 "
                         f"--rscript-file {str(self.outdir)}/07.filtered/output.{vartype}.plots.R "
                         f"-O {str(self.outdir)}/07.filtered/all.{vartype}.VQSR.vcf.gz "
                         f"{tranches} {annotation} > {_log}"

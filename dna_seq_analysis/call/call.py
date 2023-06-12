@@ -3,6 +3,7 @@ from pathlib import Path
 import multiprocessing
 from tqdm import tqdm
 import unittest
+import pandas as pd
 
 from dna_seq_analysis.tools.common import *
 
@@ -43,6 +44,11 @@ class Calling():
         if self.known:
             known = "--dbsnp " + self.known
         
+        if self.args.intervals:
+            df = pd.read_csv(self.args.intervals,sep="\t",header=None)
+            df.iloc[:,0] = df.iloc[:,0].astype('str')
+            df[df.iloc[:,0] == str(self.chro)].to_csv(f"{self.outdir}/05.called/{self.chro}.regions.bed",sep="\t",header=None,index=None)
+
         extra = get_call_variants_params(self.chro,self.outdir,self.args.intervals,self.args.interval_padding)
         _log = self.log_dir/f"HaplotypeCaller-{self.sample}-{self.chro}.log"
         cmd = (

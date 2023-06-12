@@ -84,8 +84,12 @@ class Map_reads():
             f" {self.trimmed_reads1} {self.trimmed_reads2}"
             " | " + pipe_cmd + ")"
         )
+        cmd_index=(
+            f'samtools index {self.output_bam}'
+        )
         if not Path(self.outdir/f"02.mapped/{self.sample}-{self.unit}.sorted.bam").exists():
             debug_subprocess_call(cmd)
+            debug_subprocess_call(cmd_index)
 
 
 class Get_recal():
@@ -143,8 +147,12 @@ class Get_recal():
                 f"O={self.markduplicates_bam} "  # Output bam
                 f"M={self.markduplicates_metrics} > {_log}"  # Output metrics
             )
+        cmd_index = (
+            f'samtools index {self.markduplicates_bam}'
+        )
         if not Path(self.markduplicates_bam).exists():
             debug_subprocess_call(cmd)
+            debug_subprocess_call(cmd_index)
 
 
     def recalibrate_base_qual(self):
