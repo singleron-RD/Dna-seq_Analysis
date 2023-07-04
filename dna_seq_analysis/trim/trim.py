@@ -172,7 +172,7 @@ def trim(args):
             param_list.append((fastq,outdir,wildcards,trimmer,mod,thread))
     
     with multiprocessing.Pool(len(param_list)) as p:
-        list(tqdm(p.map(run,param_list),total=len(param_list),desc='Trim reads '))
+        list(tqdm(p.imap(run,param_list),total=len(param_list),unit_scale = True,ncols = 70,file = sys.stdout,desc='Trim reads '))
     p.close()
     p.join()
     

@@ -10,6 +10,7 @@ import unittest
 from collections import Counter
 import gseapy
 from gseapy import barplot, dotplot
+from tqdm import tqdm
 
 from dna_seq_analysis.tools.common import *
 
@@ -271,7 +272,7 @@ class Split_vcf():
         for sample in samples:
             p_list.append((sample))
         with multiprocessing.Pool(len(p_list)) as p:
-            p.map(self.run,p_list)
+            list(tqdm(p.imap(self.run,p_list),total=len(p_list),unit_scale = True,ncols = 70,file = sys.stdout,desc='Split vcf of each sample '))
         p.close()
         p.join()
 

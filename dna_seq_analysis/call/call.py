@@ -201,7 +201,7 @@ def call(args):
         for chro in chr_list: 
             call_param_list.append((wildcards,outdir,chro,resource_dir,units,args))
     with multiprocessing.Pool(threads) as p:
-        list(tqdm(p.map(run_call,call_param_list),total=len(call_param_list),desc='Calling '))
+        list(tqdm(p.imap(run_call,call_param_list),total=len(call_param_list),unit_scale = True,ncols = 70,file = sys.stdout,desc='Calling '))
     p.close()
     p.join()
 
@@ -210,7 +210,7 @@ def call(args):
     for chro in chr_list: 
         combine_param_list.append((outdir,chro,resource_dir,units))
     with multiprocessing.Pool(threads) as p:
-        list(tqdm(p.map(run_comine,combine_param_list),total=len(combine_param_list),desc='Calling '))
+        list(tqdm(p.imap(run_comine,combine_param_list),total=len(combine_param_list),unit_scale = True,ncols = 70,file = sys.stdout,desc='Calling '))
     p.close()
     p.join()
     

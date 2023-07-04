@@ -73,7 +73,7 @@ def qc(args):
         param_list.append((fastq,outdir,wildcards))
 
     with multiprocessing.Pool(len(param_list)) as p:
-        list(tqdm(p.map(run,param_list),total=len(param_list),desc='Fastqc '))
+        list(tqdm(p.imap(run,param_list),total=len(param_list),unit_scale = True,ncols = 70,file = sys.stdout,desc='Fastqc '))
     p.close()
     p.join()
 

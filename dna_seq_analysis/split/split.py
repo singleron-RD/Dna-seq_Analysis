@@ -156,7 +156,7 @@ class Split_fastq():
 
         time1 = time.time()
         with multiprocessing.Pool(num_pool) as p:
-            list(tqdm(p.map(self.run,param_list),total=len(param_list),desc='Split fastq '))
+            list(tqdm(p.imap(self.run,param_list),total=len(param_list),unit_scale = True,ncols = 70,file = sys.stdout,desc='Split fastq '))
         p.close()
         p.join()
         time2 = time.time()
