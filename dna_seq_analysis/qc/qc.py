@@ -2,6 +2,7 @@ from pathlib import Path
 import multiprocessing
 from tqdm import tqdm
 import unittest
+import sys
 from dna_seq_analysis.tools.common import *
 
 

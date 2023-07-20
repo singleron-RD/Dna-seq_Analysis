@@ -6,6 +6,7 @@ from tqdm import tqdm
 from collections import defaultdict
 from pathlib import Path
 import unittest
+import sys
 
 from dna_seq_analysis.tools.common import *
 

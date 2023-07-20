@@ -4,6 +4,7 @@ import multiprocessing
 from tqdm import tqdm
 import unittest
 import pandas as pd
+import sys
 
 from dna_seq_analysis.tools.common import *
 

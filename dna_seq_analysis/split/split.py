@@ -6,6 +6,7 @@ from tqdm import tqdm
 from collections import defaultdict
 import unittest
 from itertools import product,combinations
+import sys
 
 from dna_seq_analysis.tools.common import *
 
