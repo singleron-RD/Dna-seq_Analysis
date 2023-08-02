@@ -378,7 +378,7 @@ def var_type(x):
 def plot_snv(split_dir):
     snv_dict = {}
     for sample in os.listdir(split_dir):
-        cmd = (f"zcat {split_dir}/{sample}/{sample}.vcf.gz|grep -v '#'|cut -f 4,5 > {split_dir}/{sample}/{sample}.txt")
+        cmd = (f"zcat {split_dir}/{sample}/{sample}_calls.tsv.gz|tail -n +3|cut -f 3,4 > {split_dir}/{sample}/{sample}.txt")
         debug_subprocess_call(cmd)
         df_sample = pd.read_csv(f"{split_dir}/{sample}/{sample}.txt",sep="\t",header=None)
         df_sample['len_tuble'] = df_sample.apply(lambda x: (len(x[0]),len(x[1])),axis=1)
