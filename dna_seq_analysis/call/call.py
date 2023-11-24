@@ -124,7 +124,7 @@ class Combine():
         # Allow for either an input gvcf or GenomicsDB
         _log = self.log_dir/f"GenotypeGVCFs-{self.chro}.log"
         cmd=(
-            f"gatk --java-options '-Xmx20g' GenotypeGVCFs  "
+            f"gatk --java-options '-Xmx10g' GenotypeGVCFs  "
             f"-V {str(self.outdir)}/05.called/all.{self.chro}.g.vcf.gz "
             f"-R {self.ref} "
             f"-O {str(self.outdir)}/06.genotyped/all.{self.chro}.vcf.gz > {_log}"

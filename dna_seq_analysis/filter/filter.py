@@ -107,7 +107,7 @@ class Filtering():
         tranches_file = f"{str(self.outdir)}/07.filtered/all.{vartype}.tranches"
         tranches = "--tranches-file " + tranches_file
         cmd_snp = (
-            f"gatk --java-options '-Xmx20G' VariantRecalibrator {resources} "
+            f"gatk --java-options '-Xmx10G' VariantRecalibrator {resources} "
             f"-R {REF} -V {str(self.outdir)}/06.genotyped/all_chr.vcf.gz "
             f"-mode {mode} "
             f"--rscript-file {str(self.outdir)}/07.filtered/output.{vartype}.plots.R "
@@ -115,7 +115,7 @@ class Filtering():
             f"{tranches} {annotation} > {_log}"
         )
         
-        apply_snp_vqsr_cmd = (f"gatk --java-options '-Xmx20G' ApplyVQSR "
+        apply_snp_vqsr_cmd = (f"gatk --java-options '-Xmx10G' ApplyVQSR "
                           f"-R {REF} -V {str(self.outdir)}/06.genotyped/all_chr.vcf.gz "
                           f"{tranches} "
                           f"--recal-file {str(self.outdir)}/07.filtered/all.{vartype}.{filtertype}.vcf.gz "
@@ -137,7 +137,7 @@ class Filtering():
         tranches_file = f"{str(self.outdir)}/07.filtered/all.{vartype}.tranches"
         tranches = "--tranches-file " + tranches_file
         
-        cmd_indel = (   f"gatk --java-options '-Xmx20G' VariantRecalibrator {resources} "
+        cmd_indel = (   f"gatk --java-options '-Xmx10G' VariantRecalibrator {resources} "
                         f"-R {REF} "
                         f"-V {str(self.outdir)}/07.filtered/all.snps.VQSR.vcf.gz "
                         f"-mode {mode} "
@@ -146,7 +146,7 @@ class Filtering():
                         f"-O {str(self.outdir)}/07.filtered/all.{vartype}.VQSR.vcf.gz "
                         f"{tranches} {annotation} > {_log}"
         )
-        apply_indel_vqsr_cmd = (f"gatk --java-options '-Xmx20G' ApplyVQSR "
+        apply_indel_vqsr_cmd = (f"gatk --java-options '-Xmx10G' ApplyVQSR "
                                 f"-R {REF} "
                                 f"-V {str(self.outdir)}/07.filtered/all.snps.VQSR.vcf.gz "
                                 f"--truth-sensitivity-filter-level 99.0 "
