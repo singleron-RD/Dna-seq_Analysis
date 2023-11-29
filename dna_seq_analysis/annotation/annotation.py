@@ -152,7 +152,7 @@ class Annotate():
     
     
     @add_log
-    def run(self):
+    def run_all(self):
         self.annotation()
         self.vcf2tsv()
         
@@ -273,13 +273,13 @@ class Split_vcf():
         for sample in samples:
             p_list.append((sample))
         with multiprocessing.Pool(len(p_list)) as p:
-            list(tqdm(p.imap(self.run,p_list),total=len(p_list),unit_scale = True,ncols = 70,file = sys.stdout,desc='Split vcf of each sample '))
+            list(tqdm(p.imap(self.run_split,p_list),total=len(p_list),unit_scale = True,ncols = 70,file = sys.stdout,desc='Split vcf of each sample '))
         p.close()
         p.join()
 
 
     @add_log
-    def run(self,param):
+    def run_split(self,param):
         sample = param
         self.split(sample)
 
@@ -419,7 +419,7 @@ def plot_snv(split_dir):
     fig.savefig(f"{split_dir}/total_snv.png",dpi=1000,bbox_inches='tight')
 
 
-@add_log
+
 def annotation(args):
     config_path = args.config_path
     config = parse_config(config_path)
@@ -427,9 +427,9 @@ def annotation(args):
     resource_dir = config['genomedir']
     
     run_annotate = Annotate(outdir,resource_dir,args)
-    run_annotate.run()    
-    run_split =  Split_vcf(outdir,resource_dir,args)
-    run_split.run_split_vcf()
+    run_annotate.run_all()    
+    run_split_annotate =  Split_vcf(outdir,resource_dir,args)
+    run_split_annotate.run_split_vcf()
     merge_maf(f'{outdir}/11.split')
     plot_snv(f'{outdir}/11.split')
     if args.species in ['homo_sapiens','mus_musculus']:

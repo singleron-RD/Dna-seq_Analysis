@@ -34,8 +34,9 @@ class Calling():
         # log
         self.log_dir = self.outdir/"logs/called"
         self.log_dir.mkdir(parents=True,exist_ok=True)
-        
+    
 
+    @add_log
     def call_variants(self):
         """
         """
@@ -53,7 +54,7 @@ class Calling():
         extra = get_call_variants_params(self.chro,self.outdir,self.args.intervals,self.args.interval_padding)
         _log = self.log_dir/f"HaplotypeCaller-{self.sample}-{self.chro}.log"
         cmd = (
-                f"gatk --java-options '-Xmx10g' HaplotypeCaller {extra} "
+                f"gatk --java-options '-Xmx20G -XX:ParallelGCThreads=2' HaplotypeCaller {extra} "
                 f"-R {self.ref} {bams} "
                 f"-ERC GVCF "
                 f"-O {self.outdir}/05.called/{self.sample}.{self.chro}.g.vcf.gz {known} > {_log}"
@@ -67,20 +68,12 @@ class Calling():
                 
 
 
-    @add_log
-    def main(self):
-        """
-        run markduplicates and recalibrate base qual and apply base quality recal
-        """
-        self.call_variants()
-
-
 def run_call(params):
     """
     """
     wildcards,outdir,chro,resource_dir,units,args = params
     app_calling = Calling(wildcards,outdir,chro,resource_dir,units,args)
-    app_calling.main()
+    app_calling.call_variants()
 
 
 
@@ -102,6 +95,7 @@ class Combine():
         self.log_dir = self.outdir/"logs/called"
 
 
+    @add_log
     def combine_calls(self):
         """
         """
@@ -110,7 +104,7 @@ class Combine():
         gvcfs = [f"{str(self.outdir)}/05.called/{sample}.{self.chro}.g.vcf.gz" for sample in samples_set]
         gvcfs = ' '.join(list(map("-V {}".format, gvcfs)))
         cmd = (
-            "gatk --java-options '-Xmx10g' CombineGVCFs "
+            "gatk --java-options '-Xmx10g -XX:ParallelGCThreads=2' CombineGVCFs "
             f"{gvcfs} "
             f"-R {self.ref} "
             f"-O {str(self.outdir)}/05.called/all.{self.chro}.g.vcf.gz > {_log}"
@@ -119,12 +113,12 @@ class Combine():
             debug_subprocess_call(cmd)
 
 
-    
+    @add_log
     def genotype_variants(self):
         # Allow for either an input gvcf or GenomicsDB
         _log = self.log_dir/f"GenotypeGVCFs-{self.chro}.log"
         cmd=(
-            f"gatk --java-options '-Xmx10g' GenotypeGVCFs  "
+            f"gatk --java-options '-Xms2G -Xmx2G -XX:ParallelGCThreads=2' GenotypeGVCFs  "
             f"-V {str(self.outdir)}/05.called/all.{self.chro}.g.vcf.gz "
             f"-R {self.ref} "
             f"-O {str(self.outdir)}/06.genotyped/all.{self.chro}.vcf.gz > {_log}"
@@ -133,21 +127,20 @@ class Combine():
             debug_subprocess_call(cmd)
 
 
-    @add_log
-    def main(self):
+    def combine(self):
         """
-        run markduplicates and recalibrate base qual and apply base quality recal
+        run CombineGVCFs and CombineGVCFs
         """
         self.combine_calls()
         self.genotype_variants()
 
 
-def run_comine(params):
+def run_combine(params):
     """
     """
     outdir,chro,resource_dir,units = params
     app_combine = Combine(outdir,chro,resource_dir,units)
-    app_combine.main()
+    app_combine.combine()
 
 
 @add_log
@@ -167,7 +160,7 @@ def merge_variants(outdir,chr_list):
     debug_subprocess_call(cmd)
 
 
-@add_log
+
 def call(args):
     config_path = args.config_path
     threads = args.thread
@@ -201,7 +194,8 @@ def call(args):
     for wildcards in units.index:
         for chro in chr_list: 
             call_param_list.append((wildcards,outdir,chro,resource_dir,units,args))
-    with multiprocessing.Pool(threads) as p:
+    num_cpu = threads if len(call_param_list) > threads else len(call_param_list)
+    with multiprocessing.Pool(num_cpu) as p:
         list(tqdm(p.imap(run_call,call_param_list),total=len(call_param_list),unit_scale = True,ncols = 70,file = sys.stdout,desc='Calling '))
     p.close()
     p.join()
@@ -210,8 +204,9 @@ def call(args):
     combine_param_list = []
     for chro in chr_list: 
         combine_param_list.append((outdir,chro,resource_dir,units))
-    with multiprocessing.Pool(threads) as p:
-        list(tqdm(p.imap(run_comine,combine_param_list),total=len(combine_param_list),unit_scale = True,ncols = 70,file = sys.stdout,desc='Calling '))
+    num_cpu = threads if len(combine_param_list) > threads else len(combine_param_list)
+    with multiprocessing.Pool(num_cpu) as p:
+        list(tqdm(p.imap(run_combine,combine_param_list),total=len(combine_param_list),unit_scale = True,ncols = 70,file = sys.stdout,desc='Calling '))
     p.close()
     p.join()
     
@@ -230,7 +225,7 @@ def call(args):
 
 
 def get_opts_call(parser, sub_program=True):
-    parser.add_argument('--thread',help='Number of threads.', default=4,type=int)
+    parser.add_argument('--thread',help='Number of threads.', default=30,type=int)
     parser.add_argument('--intervals',help='One or more genomic intervals over which to operate.This argument may be specified 0 or more times.')
     parser.add_argument('--interval_padding',help='Amount of padding (in bp) to add to each interval you are including.',default=0,type=int)
     if sub_program:

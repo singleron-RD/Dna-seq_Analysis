@@ -203,7 +203,6 @@ class Filtering():
             
 
 
-@add_log
 def filter(args):
     config_path = args.config_path
     config = parse_config(config_path)

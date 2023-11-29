@@ -3,6 +3,7 @@ import multiprocessing
 from tqdm import tqdm
 import unittest
 import sys
+import math
 
 from dna_seq_analysis.tools.common import *
 
@@ -136,7 +137,7 @@ def run(params):
 @add_log
 def trim(args):
     config_path = args.config_path
-    thread = args.thread
+    threads = args.thread
     trim_param = args.trim_param
     config = parse_config(config_path)
     outdir = config['outdir']
@@ -147,6 +148,7 @@ def trim(args):
     units = get_units(units_file)
     
     param_list = []
+    trim_thread = math.ceil(threads/units.shape[0])
     for wildcards in units.index:
         fastq = get_fastq(units,wildcards)
         # Applicable to additional test data
@@ -165,14 +167,15 @@ def trim(args):
             mod = 'PE' if len(fastq) > 1 else 'SE'
             TRIM_DICT[mod.swapcase()].update(extra_param_dict)
             trimmer = " ".join([key+':'+value for key,value in TRIM_DICT[mod.swapcase()].items()])
-            param_list.append((fastq_dict,outdir,wildcards,trimmer,mod,thread)) 
+            param_list.append((fastq_dict,outdir,wildcards,trimmer,mod,trim_thread)) 
         else:
             mod = 'PE' if len(fastq) > 1 else 'SE'
             TRIM_DICT[mod.swapcase()].update(extra_param_dict)
             trimmer = " ".join([key+':'+value for key,value in TRIM_DICT[mod.swapcase()].items()])
-            param_list.append((fastq,outdir,wildcards,trimmer,mod,thread))
+            param_list.append((fastq,outdir,wildcards,trimmer,mod,trim_thread))
     
-    with multiprocessing.Pool(len(param_list)) as p:
+    num_cpu = threads if len(param_list) > threads else len(param_list)
+    with multiprocessing.Pool(num_cpu) as p:
         list(tqdm(p.imap(run,param_list),total=len(param_list),unit_scale = True,ncols = 70,file = sys.stdout,desc='Trim reads '))
     p.close()
     p.join()

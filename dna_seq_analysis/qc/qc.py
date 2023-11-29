@@ -53,6 +53,7 @@ class Fastqc():
         self.samtools_stats()
 
 
+@add_log
 def run(params):
     fastq,outdir,wildcards = params
     app = Fastqc(fastq=fastq,outdir=outdir,wildcards=wildcards)

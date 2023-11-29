@@ -7,6 +7,7 @@ from collections import defaultdict
 from pathlib import Path
 import unittest
 import sys
+import math
 
 from dna_seq_analysis.tools.common import *
 
@@ -99,7 +100,7 @@ class Get_recal():
     """
     def __init__(self,wildcards,threads,outdir,resource_dir,args):
         self.sample,self.unit = wildcards
-        self.threads = threads
+        self.threads = threads if threads < 10 else 10
         self.outdir = Path(outdir)
         self.args = args
 
@@ -211,7 +212,7 @@ class Get_recal():
         debug_subprocess_call(cmd_python)
 
         # coverage
-        cmd_coverage = (f'/SGRNJ01/Public/Software/conda_env/pacbio_v1/bin/samtools coverage {str(self.mapped_bam)} > {str(self.outdir)}/02.mapped/{name}_frag.cov')
+        cmd_coverage = (f'samtools coverage {str(self.mapped_bam)} > {str(self.outdir)}/02.mapped/{name}_frag.cov')
         
         debug_subprocess_call(cmd_coverage)
 
@@ -257,86 +258,6 @@ class Get_recal():
         self.recalibrate_base_qual()
         self.apply_base_quality_recal()
         self.qc()
-
-
-class CNV():
-    """
-    copy number variations
-    """
-    def __init__(self,threads,outdir,resource_dir):
-        self.genome = f"{resource_dir}/genome.fasta"
-        self.refflat = f"{resource_dir}/genome.refFlat"
-        self.threads = threads
-        self.recal_path = Path(f'{outdir}/04.recal')
-        
-    def cnv(self):
-        bed_file = 'access-1kb.bed'
-        cmd_bed = (f"cnvkit.py access {self.refflat} -s 100000 -o {bed_file};sed -i '/^[KGMJ]/d' {bed_file}")
-        cmd_cnv = ('cnvkit.py batch '
-               f'{str(self.recal_path)}/*.sorted.bam -n '
-               f'-t {bed_file} --method wgs --fasta {self.genome} --annotate {self.refflat} '
-               f'-p {self.threads} --output-dir {str(self.recal_path)}/cnv '
-               '--scatter --drop-low-coverage '
-        )
-        cmd_plot = (f'cnvkit.py heatmap {str(self.recal_path)}/cnv/*.cns -o {str(self.recal_path)}/cnv/Heatmap.pdf')
-        debug_subprocess_call(cmd_bed)
-        debug_subprocess_call(cmd_cnv)
-        debug_subprocess_call(cmd_plot)
-        Path(bed_file).unlink()
-
-    def plot_bar(self):
-        cnvkit_dir = self.recal_path/'cnv'
-        cnr_dict ={}
-        for cnr_file in cnvkit_dir.rglob('*sorted.cnr'):
-            sample = cnr_file.name.rsplit("-",1)[0]
-            cnr_dict.update({sample:str(cnr_file)})
-            
-        chrom = '12'  # set
-        fig,axs = plt.subplots(nrows=len(cnr_dict),ncols=1,figsize=(20,3*len(cnr_dict)))
-
-        for i,sample in enumerate(cnr_dict):
-            df = pd.read_csv(cnr_dict[sample],header=0,sep="\t")
-            df['chromosome'] = df['chromosome'].astype('str')
-            df_sub = (
-                        df.query("chromosome == @chrom")
-                        .drop(columns=['start','end','gene','depth','weight'])
-                    )
-            df_sub_pos = df_sub.where(lambda d:d.log2 > 0,0)
-            df_sub_pos['chromosome'] = np.arange(df_sub_pos.shape[0])
-            df_sub_neg = df_sub.mask(lambda d:d.log2 > 0,0)
-            df_sub_neg['chromosome'] = np.arange(df_sub_neg.shape[0])
-            lims = df_sub['log2'].min(),df_sub['log2'].max()
-        
-            axs[i].bar(df_sub_pos['chromosome'],df_sub_pos['log2'],color='red')
-            axs[i].set_ylim(lims)
-            ax = axs[i].twinx()
-            ax.bar(df_sub_neg['chromosome'],df_sub_neg['log2'],color='blue')
-            ax.set_ylim(lims)
-            ax.set_axis_off()
-            #set axs[i]
-            for spine in ['top','bottom','left','right']:
-                axs[i].spines[spine].set_color('none')
-            axs[i].tick_params(bottom=False,top=False,left=False,right=False)
-            axs[i].set_xticks([])
-            axs[i].set_yticks([])
-            # add y lable
-            fontdict_lable={'size':10,
-                    'color':'k',
-                    'family':'serif'}
-            axs[i].set_ylabel(f'{sample}',fontdict=fontdict_lable)
-        
-        # set sub plot
-        fig.suptitle('CNVs detected',fontsize=16,fontweight='bold')
-        fig.supylabel('Log2(sample/reference)',fontsize=16,fontweight='bold') 
-        fig.savefig(f"{cnvkit_dir}/Chorm12_cnr.pdf",dpi=1000,bbox_inches='tight')
-        fig.savefig(f"{cnvkit_dir}/Chorm12_cnr.png",dpi=1000,bbox_inches='tight')
-    
-    
-    @add_log
-    def run(self):
-        self.cnv()
-        self.plot_bar() 
-
 
 
 @add_log
@@ -443,8 +364,6 @@ def run_downsample_fastq(param):
 
 
 
-
-@add_log
 def map(args):
     config_path = args.config_path
     threads = args.thread
@@ -470,19 +389,16 @@ def map(args):
         with multiprocessing.Pool(len(p_list)) as p:
             p.map(run_downsample_fastq,p_list)
         p.close()
-        p.join() 
+        p.join()
 
 
     param_list = []
+    map_thread = math.ceil(threads/units.shape[0])
     for wildcards in units.index: 
-        param_list.append((wildcards,threads,outdir,resource_dir,units,args))
+        param_list.append((wildcards,map_thread,outdir,resource_dir,units,args))
 
     # Limit the number of CPUs used
-    if len(param_list) > 20:
-        num_cpu = 20
-    else:
-        num_cpu = len(param_list)
-    
+    num_cpu = threads if len(param_list) > threads else len(param_list)
     with multiprocessing.Pool(num_cpu) as p:
         list(tqdm(p.imap(run,param_list),total=len(param_list),unit_scale = True,ncols = 70,file = sys.stdout,desc='Mapping reads '))
     p.close()
@@ -490,10 +406,6 @@ def map(args):
 
     # merge data
     merge(str(outdir),args.downsample)
-    
-    # CNV
-    #cnv_app = CNV(threads,outdir,resource_dir)
-    #cnv_app.run()
     
     # clean
     clean_cmd = (f"rm -rf {outdir}/02.mapped {outdir}/03.dedup")
@@ -503,7 +415,7 @@ def map(args):
     
 
 def get_opts_map(parser, sub_program=True):
-    parser.add_argument('--thread',help='Number of threads.', default=4,type=int)
+    parser.add_argument('--thread',help='Number of threads.', default=8,type=int)
     parser.add_argument('--remove_duplicates',help='Delete the duplicate sequence after comparison.', action='store_true')
     parser.add_argument('--intervals',help='One or more genomic intervals over which to operate.This argument may be specified 0 or more times.')
     parser.add_argument('--interval_padding',help='Amount of padding (in bp) to add to each interval you are including.',default=0,type=int)
