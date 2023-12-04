@@ -366,7 +366,7 @@ def run_downsample_fastq(param):
 
 def map(args):
     config_path = args.config_path
-    threads = args.thread
+    threads = args.map_thread
     config = parse_config(config_path)
     outdir = config['outdir']
     resource_dir = config['genomedir']
@@ -415,7 +415,7 @@ def map(args):
     
 
 def get_opts_map(parser, sub_program=True):
-    parser.add_argument('--thread',help='Number of threads.', default=8,type=int)
+    parser.add_argument('--map_thread',help='Number of threads in the map step.',type=int)
     parser.add_argument('--remove_duplicates',help='Delete the duplicate sequence after comparison.', action='store_true')
     parser.add_argument('--intervals',help='One or more genomic intervals over which to operate.This argument may be specified 0 or more times.')
     parser.add_argument('--interval_padding',help='Amount of padding (in bp) to add to each interval you are including.',default=0,type=int)

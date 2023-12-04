@@ -165,7 +165,17 @@ use `--steps_not_run ref,split`.
 
 `--outdir` The directory of script output.
 
-`--thread` Thread to use.
+`--threads` Thread to use.
+
+`--split_thread` Number of threads in the split step.
+
+`--trim_thread` Number of threads in the trim seq step.
+
+`--map_thread` Number of threads in the map step.
+
+`--call_thread` Number of threads in the call varition step.
+
+`--annotation_threads` Number of threads in the annotation step.
 
 `--memory` The memory size used, the default is GB.
 

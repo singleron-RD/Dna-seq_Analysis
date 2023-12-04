@@ -65,7 +65,7 @@ class Split_fastq():
         self.args_dict = parse_mapfile(self.mapfile)
         self.units_dict = defaultdict(dict)
         #
-        self.thread = args.thread
+        self.thread = args.split_thread
         
         
 
@@ -176,7 +176,7 @@ def split(args):
     
 def get_opts_split(parser, sub_program=True):
     parser.add_argument('--mapfile',help='The necessary mapfile file location for splitting the original sequence.',type=str)
-    parser.add_argument('--thread',help='Number of threads.', default=4,type=int)
+    parser.add_argument('--split_thread',help='Number of threads in the split step.', default=1,type=int)
     
     if sub_program:
         parser = s_common(parser)

@@ -57,7 +57,7 @@ class Multi():
     ''')
         parser.add_argument('--whether_split', help='Whether to split the original sequence according to the index.',choices=['true','false'],required=True)
         # sub_program parser do not have
-        parser.add_argument('--thread', help='Number of threads.', default=4,type=int)
+        parser.add_argument('--threads', help='Number of threads.', default=30,type=int)
         parser.add_argument('--outdir', help='The directory of script output.', default='./')
         parser.add_argument('--memory', help='The memory size used, the default is GB', default=10,type=int)
         self.parser = parser
@@ -118,12 +118,20 @@ class Multi():
         self.config = parse_config(self.args.config_path)
         
         # thread and memory
-        self.thread = self.args.thread
+        self.thread = self.args.threads
         self.memory = self.args.memory
 
     
     def generate_cmd(self, cmd, step, m=1, x=1):
-    
+        
+        try:
+            args = self.parse_step_args(step)
+            args_dict = args[0].__dict__
+            if args_dict[f'{step}_thread']:
+                x = args_dict[f'{step}_thread']
+        except KeyError:
+            pass
+
         sched_options = f'sched_options -w n -cwd -V -l vf={m}g,p={x}'
         if self.args.queue:
             sched_options += f' -q {self.args.queue} '
@@ -174,6 +182,11 @@ job_end
                         cmd_line += f'--{arg} "{arg_string}" '
                     else:
                         cmd_line += f'--{arg} {arg_string} '
+        try:
+            if args_dict[f'{step}_thread'] is None:
+                cmd_line += f'--{step}_thread {self.thread} '
+        except KeyError:
+            pass
 
         return cmd_line
 

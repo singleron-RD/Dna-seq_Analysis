@@ -82,7 +82,7 @@ class Annotate():
         #self.sample,self.unit = wildcards
         self.outdir = Path(outdir)
         self.args = args
-        self.threads = args.thread
+        self.threads = args.annotation_thread
         # input 
         self.plugins = f"{resource_dir}/vep/plugins"
         self.cache = f"{resource_dir}/vep/cache"
@@ -164,7 +164,7 @@ class Split_vcf():
     def __init__(self,outdir,resource_dir,args):
         self.outdir = Path(outdir)
         self.args = args
-        self.threads = args.thread
+        self.threads = args.annotation_thread
         self.species = args.species
         # input 
         self.plugins = f"{resource_dir}/vep/plugins"
@@ -440,7 +440,7 @@ def annotation(args):
 
 
 def get_opts_annotation(parser, sub_program=True):
-    parser.add_argument('--thread',help='Number of threads.', default=4,type=int)
+    parser.add_argument('--annotation_thread',help='Number of threads in the annotation step.',type=int)
     parser.add_argument('--species',help="Ensembl species name.")
     parser.add_argument('--build',help="Genome build.")
     parser.add_argument('--vep_param',help="Additional parameters for the called software. Need to be enclosed in quotation marks.\

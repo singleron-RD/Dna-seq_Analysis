@@ -134,10 +134,9 @@ def run(params):
     app.trim_read()
 
 
-@add_log
 def trim(args):
     config_path = args.config_path
-    threads = args.thread
+    threads = args.trim_thread
     trim_param = args.trim_param
     config = parse_config(config_path)
     outdir = config['outdir']
@@ -191,7 +190,7 @@ def trim(args):
 def get_opts_trim(parser, sub_program=True):
     parser.add_argument('--trim_param',help="Additional parameters for the called software. Need to be enclosed in quotation marks.\
 For example, `--{software}_param 'param1:value1 param2:value2'`,`--trim_param 'LEADING:3 TRAILING:3'`.",default='LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:36')
-    parser.add_argument('--thread',help='Number of threads.', default=4,type=int)
+    parser.add_argument('--trim_thread',help='Number of threads in the trim seq step.',type=int)
     
     if sub_program:
         parser = s_common(parser)
