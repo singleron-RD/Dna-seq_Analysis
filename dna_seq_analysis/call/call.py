@@ -221,7 +221,7 @@ def call(args):
     for rm_file in [f"{str(outdir)}/06.genotyped/all.{chro}.vcf.gz" for chro in chr_list]:
         filepath = Path(rm_file)
         filepath.unlink()
-
+    sys.exit(0)
 
 
 def get_opts_call(parser, sub_program=True):

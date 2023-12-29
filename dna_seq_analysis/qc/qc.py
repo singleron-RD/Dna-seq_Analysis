@@ -92,7 +92,9 @@ def qc(args):
         )
     debug_subprocess_call(multiqc_cmd)
 
+    sys.exit(0)
 
+    
 def get_opts_qc(parser, sub_program=True):
     if sub_program:
         parser = s_common(parser)

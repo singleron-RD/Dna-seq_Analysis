@@ -186,6 +186,7 @@ def trim(args):
             pathlib.Path(fastq).unlink()
         tmp_fastq.rmdir()
 
+    sys.exit(0)
     
 def get_opts_trim(parser, sub_program=True):
     parser.add_argument('--trim_param',help="Additional parameters for the called software. Need to be enclosed in quotation marks.\

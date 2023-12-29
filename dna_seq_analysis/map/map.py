@@ -238,12 +238,12 @@ class Get_recal():
 
         df = df[['#rname','coverage','meandepth']]
         df['coverage'] = df['coverage'].map(lambda x:str(x)[:5]+"%")
-        df['meandepth'] = df['meandepth'].map(lambda x:str(x)+"X")
+        df['meandepth'] = df['meandepth'].map(lambda x:str(x)[:5]+"X")
         df.to_csv(f"{str(self.outdir)}/02.mapped/{name}_chrom.coverage.txt",sep='\t',index=None)
         with open(f"{str(self.outdir)}/02.mapped/{name}_chrom.coverage.txt",'r+') as f:
             content = f.read()
             f.seek(0,0)
-            f.write(f'# mean coverage: {mean_coverage*100}%\n# mean depth: {mean_depth}X\n'+content)
+            f.write(f'# mean coverage: {round(mean_coverage*100,2)}%\n# mean depth: {round(mean_depth,2)}X\n'+content)
 
         cmd_clean = (f'rm {str(self.outdir)}/02.mapped/{name}_frag.cov')
         debug_subprocess_call(cmd_clean)
@@ -293,7 +293,7 @@ def merge(outdir,downsample):
                     break
         mapped_rate = int(mapped_paired_reads)/int(raw_reads)
         # The value is too small to use scientific notation
-        dic[name]["Mapped Reads Rate"] = f'{mapped_rate*100}%'
+        dic[name]["Mapped Reads Rate"] = f'{round(mapped_rate*100,2)}%'
         # percent duplication
         with open(f"{outdir}/qc/dedup/{name}.metrics.txt") as dedup:
             i = 0
@@ -301,7 +301,7 @@ def merge(outdir,downsample):
                 i += 1
                 if (i == 8):
                     Duplication = float(line.rsplit("\t",2)[1])
-                    dic[name]['Percent Duplication'] = f'{Duplication*100}%'
+                    dic[name]['Percent Duplication'] = f'{round(Duplication*100,2)}%'
                     break
         # mean depth
         with open(f"{outdir}/02.mapped/{name}_chrom.coverage.txt") as cov:
@@ -412,7 +412,7 @@ def map(args):
     if args.rm_files:
         debug_subprocess_call(clean_cmd)
     
-    
+    sys.exit(0)
 
 def get_opts_map(parser, sub_program=True):
     parser.add_argument('--map_thread',help='Number of threads in the map step.',type=int)

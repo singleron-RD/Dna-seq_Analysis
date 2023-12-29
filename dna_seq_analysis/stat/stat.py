@@ -5,6 +5,7 @@ import numpy as np
 import seaborn as sns
 from pathlib import Path
 import unittest
+import sys
 
 from dna_seq_analysis.tools.common import *
 
@@ -43,7 +44,7 @@ def stat(args):
     plt.ylabel("read depth")
     plt.xticks(rotation="vertical")
     plt.savefig(depths)
-    
+    sys.exit(0)
     
 def get_opts_stat(parser, sub_program=True):
     if sub_program:

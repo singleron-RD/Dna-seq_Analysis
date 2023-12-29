@@ -365,24 +365,28 @@ def go_kegg(outdir,species):
 
 
 def var_type(x):
-    if x[0] > x[1]:
-        return 'deletion'
-    elif (x[0] == x[1])&(x[0]==1):
-        return 'SNV'
-    elif (x[0] == x[1])&(x[0]!=1):
+    ref_base = x['REF']
+    alt_base = x['ALT']
+    if alt_base.find('*') == -1: # contain *
+        if len(ref_base) == 1:
+            alt_base_set = set([len(_) for _ in alt_base.split(',')])
+            if (len(alt_base_set) == 1) & (1 in alt_base_set):
+                return 'SNV'
+            else:
+                return 'other'
+        else:
+            return 'other'
+    else:
         return 'other'
-    elif x[0] < x[1]:
-        return 'insertion'
 
 
 def plot_snv(split_dir):
     snv_dict = {}
     for sample in os.listdir(split_dir):
-        cmd = (f"zcat {split_dir}/{sample}/{sample}_calls.tsv.gz|tail -n +3|cut -f 3,4 > {split_dir}/{sample}/{sample}.txt")
+        cmd = (f"grep -v '##' {split_dir}/{sample}/{sample}_annotated.vcf|cut -f 1-5 > {split_dir}/{sample}/{sample}.txt")
         debug_subprocess_call(cmd)
-        df_sample = pd.read_csv(f"{split_dir}/{sample}/{sample}.txt",sep="\t",header=None)
-        df_sample['len_tuble'] = df_sample.apply(lambda x: (len(x[0]),len(x[1])),axis=1)
-        df_sample['var_type'] = df_sample['len_tuble'].apply(var_type)
+        df_sample = pd.read_csv(f"{split_dir}/{sample}/{sample}.txt",sep="\t",low_memory=False)
+        df_sample['var_type'] = df_sample.apply(var_type,axis=1)
         i = df_sample.var_type.value_counts().get('SNV',0)
         Path(f"{split_dir}/{sample}/{sample}.txt").unlink()
         snv_dict.update({sample:i})
@@ -438,6 +442,7 @@ def annotation(args):
     else:
         print('Maftools and GO step is not running')
 
+    sys.exit(0)
 
 def get_opts_annotation(parser, sub_program=True):
     parser.add_argument('--annotation_thread',help='Number of threads in the annotation step.',type=int)

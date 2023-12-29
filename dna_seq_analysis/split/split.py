@@ -173,6 +173,7 @@ def split(args):
     runner =  Split_fastq(args)
     runner.main()
     
+    sys.exit(0)
     
 def get_opts_split(parser, sub_program=True):
     parser.add_argument('--mapfile',help='The necessary mapfile file location for splitting the original sequence.',type=str)
