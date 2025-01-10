@@ -57,7 +57,7 @@ multi_wgs --config_path test_data/\
 ```
 `--config_path` Required. The position where the config.yaml is located.Check [multi_wgs.md](./multi_wgs.md) for how to write the config.yaml .
 
-`--whether_split` Required. Whether to split the original sequence according to the index.Please refer to the [index.fasta](../test_data/file/index.fa) file for this index format.
+`--whether_split` Required. Whether to split the original sequence according to the index.Please refer to the [index.fasta](../test_data/file/index.fa) file for this index format,all sequences used can be found in [barcode-ADT.fasta](../assets/barcode-ADT.fasta).
 
 `--species` Required. Ensembl species name.
 
