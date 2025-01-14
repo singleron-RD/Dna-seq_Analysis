@@ -94,8 +94,8 @@ class Split_fastq():
                     out_fq1_dict[adapter_name].write(f'@{header1}\n{seq1[num_index:]}\n+\n{qual1[num_index:]}\n')
                     out_fq2_dict[adapter_name].write(f'@{header2}\n{seq2[num_index:]}\n+\n{qual2[num_index:]}\n')
                 else:
-                    out_notinfq1.write(f'@{header1}\n{seq1[num_index:]}\n+\n{qual1[num_index:]}\n')
-                    out_notinfq2.write(f'@{header2}\n{seq2[num_index:]}\n+\n{qual2[num_index:]}\n')
+                    out_notinfq1.write(f'@{header1}\n{seq1}\n+\n{qual1}\n')
+                    out_notinfq2.write(f'@{header2}\n{seq2}\n+\n{qual2}\n')
 
         out_notinfq1.close()
         out_notinfq2.close()
